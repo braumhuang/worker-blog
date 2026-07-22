@@ -38,6 +38,7 @@
 
 - 管理员登录和退出
 - 文章、页面、闪念的新增、编辑、删除和状态管理
+- 文章与页面封面 URL；列表右侧缩略图和详情页头图共用
 - Markdown 工具栏和实时预览
 - 分类与标签管理
 - R2 附件上传、插入和删除
@@ -94,7 +95,9 @@ Favicon 不依赖静态图片文件，而是由 Worker 根据 D1 中的设置动
 
 ## 6. 前台主题实现
 
-前台样式基于 Winston 站点所使用的 Kehua“留白”主题结构进行适配，并保留其 MIT 授权说明。主要视觉特征包括约 960px 单栏内容区、60px 吸顶导航、轻边框文章卡片、红色强调色、居中页面标题、闪念时间轴、归档统计、圆角搜索弹窗和深浅模式。Worker 项目使用 Hono JSX 重写模板，数据仍由 D1 动态提供。
+前台直接以 Kehua“留白”主题的公开样式为基础适配，并保留其 MIT 授权说明。主要视觉特征包括约 720px 的窄幅单栏内容区、60px 吸顶导航、克制留白、轻边框文章卡片、右侧 120×120 封面、红色强调色、居中页面标题、闪念时间轴、归档统计、圆角搜索弹窗和深浅模式。Worker 项目使用 Hono JSX 重写模板，数据仍由 D1 动态提供。
+
+后台按照 Typecho 管理界面的结构与视觉语言重构：深色 36px 顶部导航、1160px 内容容器、灰白页面底色、蓝灰色主按钮、细边框表格和左右栏内容编辑器。它并未复制 Typecho 的 PHP 模板或业务代码，只在当前 Hono 后台组件上实现相近的排版和交互层级。
 
 ## 7. 项目结构
 
@@ -107,6 +110,8 @@ worker-blog/
 ├── package.json
 ├── package-lock.json
 ├── schema.sql              # D1 表结构、索引和触发器
+├── migrations/
+│   └── 0001_add_content_cover.sql # 旧数据库增加封面字段
 ├── seed.sql                # 开发模拟数据
 ├── tsconfig.json
 ├── wrangler.toml           # Worker、D1、R2 和变量配置
@@ -135,7 +140,7 @@ worker-blog/
 
 ## 8. 数据模型
 
-### 6.1 `blog_contents`
+### 8.1 `blog_contents`
 
 统一保存文章、页面、闪念和附件记录。
 
@@ -146,32 +151,33 @@ worker-blog/
 - `slug`：公开路径别名
 - `created`、`modified`：Unix 时间戳
 - `text`：正文或附件信息
+- `cover`：文章或页面封面 URL；同一字段用于列表右侧缩略图和详情页头图，为空时不显示封面
 - `type`：`post`、`page`、`memo`、`attachment`
 - `status`：`publish`、`draft`、`hidden`
 
-### 6.2 `blog_metas`
+### 8.2 `blog_metas`
 
 保存分类和标签。`type` 为 `category` 或 `tag`。
 
-### 6.3 `blog_relationships`
+### 8.3 `blog_relationships`
 
 保存内容与分类、标签的多对多关系。数据库触发器会维护 `blog_metas.count`。
 
-### 6.4 `blog_options`
+### 8.4 `blog_options`
 
 键值形式保存网站设置。新增设置不需要修改表结构，只需增加默认值、后台字段和保存逻辑。
 
-### 6.5 `blog_cookies`
+### 8.5 `blog_cookies`
 
 保存后台登录会话和过期时间。
 
-### 6.6 `blog_links`
+### 8.6 `blog_links`
 
 保存友链或个人导航链接，包括名称、网址、图标、说明和排序值。
 
 ## 9. 主要路由
 
-### 7.1 公开路由
+### 9.1 公开路由
 
 | 路由 | 用途 |
 | --- | --- |
@@ -187,7 +193,7 @@ worker-blog/
 | `/favicon.svg` | 动态 SVG Favicon |
 | `/uploads/*` | R2 文件代理 |
 
-### 7.2 后台路由
+### 9.2 后台路由
 
 | 路由 | 用途 |
 | --- | --- |
@@ -253,7 +259,14 @@ bucket_name = "worker-blog-assets"
 
 ## 13. 数据初始化
 
-`schema.sql` 使用 `CREATE TABLE IF NOT EXISTS` 创建表、索引和触发器，可以用于初始化新数据库。
+`schema.sql` 使用 `CREATE TABLE IF NOT EXISTS` 创建表、索引和触发器，可以用于初始化新数据库。当前新库会直接包含 `blog_contents.cover`。
+
+已有数据库升级时执行 `migrations/0001_add_content_cover.sql`，且只执行一次：
+
+```bash
+npm run db:migrate:cover:local
+npm run db:migrate:cover:remote
+```
 
 `seed.sql` 包含 Winston 示例站点的开发模拟数据，并会先清空业务表。它适合本地演示或全新测试环境，不适合直接用于已有正式内容的生产数据库。
 
@@ -263,7 +276,9 @@ bucket_name = "worker-blog-assets"
 npm run db:schema:local
 npm run db:seed:local
 npm run db:reset:local
+npm run db:migrate:cover:local
 npm run db:schema:remote
+npm run db:migrate:cover:remote
 npm run db:seed:remote
 ```
 

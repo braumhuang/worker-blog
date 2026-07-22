@@ -27,6 +27,7 @@ export interface BlogContent {
   created: number
   modified: number
   text: string
+  cover: string
   type: ContentType
   status: ContentStatus
 }

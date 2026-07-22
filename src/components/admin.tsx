@@ -14,6 +14,12 @@ const adminNav = [
 
 type LayoutProps = PropsWithChildren<{ title: string; subtitle?: string; actions?: unknown }>
 
+function activeNav(title: string, label: string): boolean {
+  if (label === '面板') return title === '面板'
+  if (label === '设置') return title.includes('设置')
+  return title.includes(label)
+}
+
 export function AdminLayout({ title, subtitle, actions, children }: LayoutProps) {
   return (
     <html lang="zh-CN">
@@ -26,23 +32,28 @@ export function AdminLayout({ title, subtitle, actions, children }: LayoutProps)
       </head>
       <body>
         <header class="admin-topbar">
-          <nav class="admin-desktop-nav" aria-label="后台主导航">{adminNav.map(([href, label]) => <a href={href}>{label}</a>)}</nav>
-          <div class="admin-user"><a href="/" target="_blank">查看站点</a><a href="/admin/logout">退出</a></div>
-          <details class="admin-mobile-menu">
-            <summary>菜单</summary>
-            <div class="admin-mobile-panel">
-              <nav aria-label="手机端后台主导航">{adminNav.map(([href, label]) => <a href={href}>{label}</a>)}</nav>
-              <div class="admin-mobile-user"><a href="/" target="_blank">查看站点</a><a href="/admin/logout">退出</a></div>
-            </div>
-          </details>
+          <div class="admin-topbar-inner">
+            <nav class="admin-desktop-nav" aria-label="后台主导航">
+              {adminNav.map(([href, label]) => <a class={activeNav(title, label) ? 'active' : undefined} href={href}>{label}</a>)}
+            </nav>
+            <div class="admin-user"><a href="/" target="_blank">查看站点</a><a href="/admin/logout">退出</a></div>
+            <details class="admin-mobile-menu">
+              <summary>菜单</summary>
+              <div class="admin-mobile-panel">
+                <nav aria-label="手机端后台主导航">{adminNav.map(([href, label]) => <a class={activeNav(title, label) ? 'active' : undefined} href={href}>{label}</a>)}</nav>
+                <div class="admin-mobile-user"><a href="/" target="_blank">查看站点</a><a href="/admin/logout">退出</a></div>
+              </div>
+            </details>
+          </div>
         </header>
         <main class="admin-shell">
           <header class="admin-heading">
-            <div><h1>{title}</h1>{subtitle ? <p>{subtitle}</p> : null}</div>
-            {actions ? <div>{actions}</div> : null}
+            <div class="admin-heading-copy"><h1>{title}</h1>{subtitle ? <p>{subtitle}</p> : null}</div>
+            {actions ? <div class="admin-heading-actions">{actions}</div> : null}
           </header>
           {children}
         </main>
+        <footer class="admin-footer"><p>Powered by Worker Blog</p></footer>
         <script src="/assets/admin.js" defer></script>
       </body>
     </html>

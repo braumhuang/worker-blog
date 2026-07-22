@@ -202,6 +202,7 @@ adminRoutes.get('/admin/content/:cid', async (c) => {
         <div class="main-form">
           <div class="field"><label for="title">标题</label><input class="input" id="title" name="title" value={content.title} placeholder={content.type === 'memo' ? '可选，留空自动生成' : '请输入标题'} /></div>
           <div class="field"><label for="slug">URL 别名</label><input class="input" id="slug" name="slug" value={content.slug.includes('-draft-') ? '' : content.slug} placeholder="留空根据标题生成" /></div>
+          {content.type !== 'memo' ? <div class="field cover-url-field"><label for="cover">封面 URL</label><input class="input" id="cover" name="cover" type="text" inputMode="url" value={content.cover || ''} placeholder="https://example.com/cover.jpg 或 /uploads/cover.jpg" /></div> : null}
           <div class="editor-panel" data-editor-panel>
             <EditorToolbar />
             <div class="editor-workspace">
@@ -237,6 +238,7 @@ adminRoutes.post('/admin/content/:cid', async (c) => {
   if (!title) title = '未命名'
   const requestedSlug = String(form.get('slug') ?? '').trim() || title
   const slug = await uniqueContentSlug(c.env.BLOG_DB, current.type, requestedSlug, cid)
+  const cover = current.type === 'memo' ? '' : String(form.get('cover') ?? '').trim()
   const created = parseDatetimeLocal(String(form.get('created') ?? ''), current.created)
   const requestedStatus = String(form.get('status') ?? 'draft') === 'publish' ? 'publish' : 'draft'
   const status: ContentStatus = form.get('hidden') === '1' ? 'hidden' : requestedStatus
@@ -246,7 +248,7 @@ adminRoutes.post('/admin/content/:cid', async (c) => {
   for (const name of tagNames) tagIds.push(await findOrCreateTag(c.env.BLOG_DB, name))
   const relationIds = [...new Set([...categoryIds, ...tagIds])]
   const statements = [
-    c.env.BLOG_DB.prepare('UPDATE blog_contents SET title = ?, slug = ?, created = ?, modified = ?, text = ?, status = ? WHERE cid = ?').bind(title, slug, created, nowSeconds(), text, status, cid),
+    c.env.BLOG_DB.prepare('UPDATE blog_contents SET title = ?, slug = ?, cover = ?, created = ?, modified = ?, text = ?, status = ? WHERE cid = ?').bind(title, slug, cover, created, nowSeconds(), text, status, cid),
     c.env.BLOG_DB.prepare('DELETE FROM blog_relationships WHERE cid = ?').bind(cid),
     ...relationIds.map((mid) => c.env.BLOG_DB.prepare('INSERT OR IGNORE INTO blog_relationships(cid, mid) VALUES(?, ?)').bind(cid, mid)),
   ]

@@ -1934,23 +1934,26 @@ body.mobile-nav-open {
 }
 
 
-/* Worker Blog adaptations */
-:root { --container-width: 960px; --container-wide: 960px; }
-.container > .article-detail { padding-left:0; padding-right:0; }
-.search-results:empty { display:none; }
-.search-result-item { color:inherit; }
+/* Worker Blog integration: keep Kehua's original dimensions and visual rhythm. */
+.container > .article-detail { padding-left: 0; padding-right: 0; }
+.search-results:empty { display: none; }
+.search-result-item { color: inherit; }
 .search-result-item:hover .search-result-title,
-.search-result-item.active .search-result-title { color:var(--color-primary); }
-.back-to-top .icon { width:20px; height:20px; }
-.footer-copyright .footer-theme { display:inline; margin:0; font-size:inherit; }
-.error-page { text-align:center; padding:var(--spacing-2xl) 0; }
-.error-page strong { display:block; font-size:6rem; line-height:1; color:var(--color-primary); }
-.error-page h1 { margin:var(--spacing-md) 0 var(--spacing-sm); }
-.error-page p { color:var(--color-text-secondary); margin-bottom:var(--spacing-lg); }
-.error-page a { display:inline-block; padding:var(--spacing-sm) var(--spacing-lg); border:1px solid var(--color-border); border-radius:var(--radius-sm); }
-.memo-heatmap-legend .memo-heatmap-cell { flex:none; }
-.about-content { text-align:left; }
-.about-content h1:first-child { display:none; }
-@media (max-width:480px){.search-modal{padding-top:72px}.search-shortcuts{display:none}.about-header{margin-bottom:var(--spacing-xl)}}
+.search-result-item.active .search-result-title { color: var(--color-primary); }
+.back-to-top .icon { width: 20px; height: 20px; }
+.footer-copyright .footer-theme { display: inline; margin: 0; font-size: inherit; }
+.about-content { text-align: left; }
+.about-content h1:first-child { display: none; }
+.error-page { text-align: center; padding: var(--spacing-2xl) 0; }
+.error-page strong { display: block; font-size: 6rem; line-height: 1; color: var(--color-primary); }
+.error-page h1 { margin: var(--spacing-md) 0 var(--spacing-sm); }
+.error-page p { color: var(--color-text-secondary); margin-bottom: var(--spacing-lg); }
+.error-page a { display: inline-block; padding: var(--spacing-sm) var(--spacing-lg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.memo-heatmap-legend .memo-heatmap-cell { flex: none; }
+@media (max-width: 480px) {
+  .search-modal { padding-top: 72px; }
+  .search-shortcuts { display: none; }
+  .about-header { margin-bottom: var(--spacing-xl); }
+}
 
 `

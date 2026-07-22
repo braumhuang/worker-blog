@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS blog_contents (
   created INTEGER NOT NULL,
   modified INTEGER NOT NULL,
   text TEXT NOT NULL DEFAULT '',
+  cover TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL CHECK (type IN ('post', 'page', 'attachment', 'memo')),
   status TEXT NOT NULL CHECK (status IN ('publish', 'draft', 'hidden')) DEFAULT 'draft'
 );

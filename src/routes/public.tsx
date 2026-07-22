@@ -23,16 +23,10 @@ async function enrichContents(db: D1Database, contents: BlogContent[]): Promise<
 }
 
 
-function firstImageOf(text: string): string {
-  const html = /<img\b[^>]*\bsrc=["']([^"']+)["']/i.exec(text)?.[1]
-  if (html) return html
-  return /!\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/.exec(text)?.[1] ?? ''
-}
-
 function PostCards({ posts, timeZone }: { posts: ContentWithMeta[]; timeZone: string }) {
   if (!posts.length) return <div class="no-results">暂无内容</div>
   return <section class="post-list">{posts.map((post) => {
-    const thumb = firstImageOf(post.text)
+    const thumb = post.cover
     const url = `/post/${encodeURIComponent(post.slug)}/`
     return <article class={`post${thumb ? ' post-with-thumb' : ''}`}>
       <div class="post-content">
@@ -111,7 +105,7 @@ publicRoutes.get('/post/:slug/', async (c) => {
   const isAbout = content.type === 'page' && content.slug === options.about_slug
   const html = renderMarkdown(content.text)
   return c.html(<PublicLayout options={options} title={content.title} active={isAbout ? 'about' : undefined} description={excerptOf(content.text, 150)}>
-    {isAbout ? <AboutProfile options={options} html={html}/> : <article class="article-detail"><header class="article-header"><h1 class="article-title">{content.title}</h1><PostMeta article created={content.created} categories={item.categories} reading={readingMinutes(content.text)} words={wordCount(content.text)} timeZone={options.site_timezone}/></header><div class="article-content" dangerouslySetInnerHTML={{ __html: html }}/><MetaPills tags={item.tags ?? []}/></article>}
+    {isAbout ? <AboutProfile options={options} html={html}/> : <article class="article-detail"><header class="article-header"><h1 class="article-title">{content.title}</h1><PostMeta article created={content.created} categories={item.categories} reading={readingMinutes(content.text)} words={wordCount(content.text)} timeZone={options.site_timezone}/></header>{content.cover ? <figure class="article-cover"><img src={content.cover} alt={content.title} loading="eager" /></figure> : null}<div class="article-content" dangerouslySetInnerHTML={{ __html: html }}/><MetaPills tags={item.tags ?? []}/></article>}
   </PublicLayout>)
 })
 
