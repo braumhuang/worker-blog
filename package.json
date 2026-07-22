@@ -1,0 +1,26 @@
+{
+  "name": "worker-blog",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types",
+    "db:schema:local": "wrangler d1 execute BLOG_DB --local --file=./schema.sql",
+    "db:schema:remote": "wrangler d1 execute BLOG_DB --remote --file=./schema.sql",
+    "db:seed:local": "wrangler d1 execute BLOG_DB --local --file=./seed.sql",
+    "db:seed:remote": "wrangler d1 execute BLOG_DB --remote --file=./seed.sql",
+    "db:reset:local": "npm run db:schema:local && npm run db:seed:local"
+  },
+  "dependencies": {
+    "hono": "^4.12.30",
+    "marked": "^18.0.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260717.1",
+    "typescript": "^5.9.2",
+    "wrangler": "4.110.0"
+  }
+}

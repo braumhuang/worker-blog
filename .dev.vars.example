@@ -1,0 +1,5 @@
+# 本地开发可覆盖 wrangler.toml 中的变量
+ADMIN_NAME=admin
+ADMIN_PSWD=change-this-password
+R2_PUBLIC_URL=
+MAX_UPLOAD_MB=25

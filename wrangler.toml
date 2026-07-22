@@ -1,0 +1,20 @@
+name = "worker-blog"
+main = "src/index.tsx"
+compatibility_date = "2026-07-15"
+workers_dev = true
+
+[vars]
+ADMIN_NAME = "admin"
+ADMIN_PSWD = "change-this-password"
+# 可选：配置 R2 自定义公开域名，例如 https://static.example.com
+R2_PUBLIC_URL = ""
+MAX_UPLOAD_MB = "25"
+
+[[d1_databases]]
+binding = "BLOG_DB"
+database_name = "worker-blog"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[[r2_buckets]]
+binding = "BLOG_R2"
+bucket_name = "worker-blog-assets"
