@@ -1,5 +1,6 @@
 import type { OptionMap } from '../types'
 import { dbAll } from './db'
+import { normalizeFaviconColor, normalizeFaviconText } from './favicon'
 
 export const DEFAULT_OPTIONS: OptionMap = {
   site_title: 'My Hono Blog',
@@ -9,11 +10,21 @@ export const DEFAULT_OPTIONS: OptionMap = {
   about_slug: 'about',
   footer_text: 'Stay Young, Stay Simple.',
   site_timezone: 'Asia/Shanghai',
+  favicon_text: 'B',
+  favicon_color: '#999999',
+  about_avatar: '',
+  about_github: '',
+  about_x: '',
+  about_rss: '',
+  about_email: '',
 }
 
 export async function getOptions(db: D1Database): Promise<OptionMap> {
   const rows = await dbAll<{ name: string; value: string }>(db, 'SELECT name, value FROM blog_options')
-  return Object.assign({}, DEFAULT_OPTIONS, Object.fromEntries(rows.map((row) => [row.name, row.value])))
+  const options = Object.assign({}, DEFAULT_OPTIONS, Object.fromEntries(rows.map((row) => [row.name, row.value])))
+  options.favicon_color = normalizeFaviconColor(options.favicon_color)
+  options.favicon_text = normalizeFaviconText(options.favicon_text, Array.from(options.site_title.trim())[0] || 'B')
+  return options
 }
 
 export async function saveOptions(db: D1Database, values: OptionMap): Promise<void> {

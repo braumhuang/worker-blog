@@ -6,6 +6,7 @@ import { adminJs } from './assets/admin.js'
 import { publicCss } from './assets/public.css'
 import { publicJs } from './assets/public.js'
 import { PublicLayout } from './components/public'
+import { renderFaviconSvg } from './lib/favicon'
 import { getOptions } from './lib/options'
 import { adminRoutes } from './routes/admin'
 import { publicRoutes } from './routes/public'
@@ -21,6 +22,13 @@ app.get('/assets/public.css', (c) => c.body(publicCss, 200, { 'Content-Type': 't
 app.get('/assets/admin.css', (c) => c.body(adminCss, 200, { 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }))
 app.get('/assets/public.js', (c) => c.body(publicJs, 200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }))
 app.get('/assets/admin.js', (c) => c.body(adminJs, 200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }))
+app.get('/favicon.svg', async (c) => {
+  const options = await getOptions(c.env.BLOG_DB)
+  return c.body(renderFaviconSvg(options), 200, {
+    'Content-Type': 'image/svg+xml; charset=utf-8',
+    'Cache-Control': 'public, max-age=300',
+  })
+})
 
 function parseByteRange(value: string, size: number): { offset: number; length: number } | null {
   const match = /^bytes=(\d*)-(\d*)$/.exec(value.trim())

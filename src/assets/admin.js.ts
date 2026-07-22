@@ -165,6 +165,30 @@ export const adminJs = String.raw`
     iconUpload.value = '';
   });
 
+  const faviconText = $('[data-favicon-text]');
+  const faviconColorText = $('[data-favicon-color-text]');
+  const faviconColorPicker = $('[data-favicon-color-picker]');
+  const faviconPreview = $('[data-favicon-preview]');
+  const validFaviconColor = (value) => /^#[0-9a-f]{6}$/i.test(value);
+  const updateFaviconPreview = () => {
+    if (!faviconPreview) return;
+    faviconPreview.textContent = Array.from(faviconText?.value.trim() || 'B').slice(0, 2).join('');
+    if (faviconColorText && validFaviconColor(faviconColorText.value.trim())) {
+      faviconPreview.style.setProperty('--favicon-color', faviconColorText.value.trim());
+    }
+  };
+  faviconText?.addEventListener('input', updateFaviconPreview);
+  faviconColorPicker?.addEventListener('input', () => {
+    if (faviconColorText) faviconColorText.value = faviconColorPicker.value.toUpperCase();
+    updateFaviconPreview();
+  });
+  faviconColorText?.addEventListener('input', () => {
+    const value = faviconColorText.value.trim();
+    if (faviconColorPicker && validFaviconColor(value)) faviconColorPicker.value = value;
+    updateFaviconPreview();
+  });
+  updateFaviconPreview();
+
   document.querySelectorAll('[data-confirm]').forEach((element) => element.addEventListener('click', (event) => {
     if (!confirm(element.dataset.confirm || '确定执行吗？')) event.preventDefault();
   }));

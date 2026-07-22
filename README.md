@@ -1,93 +1,63 @@
 # worker-blog
 
-基于 Cloudflare Workers、D1、R2、Hono 和 Hono JSX 的个人博客项目。
+## 项目简介
 
-前台包含首页、闪念、归档、标签、分类、友链导航、关于、文章详情、搜索、日夜模式和移动端全宽导航抽屉；后台包含文章、页面、闪念、分类、标签、附件、友链和系统配置管理。
+`worker-blog` 是一个运行在 Cloudflare Workers 上的轻量个人博客，使用 Hono、Hono JSX、D1 和 R2 构建。
 
-## 本次版本基线
+项目提供文章、页面、闪念、分类、标签、附件、友链、搜索、深浅模式和响应式前台，同时带有完整的内容管理后台。前台按照 Winston 使用的 Kehua“留白”主题重构，保持单栏、克制留白、文章卡片、时间轴、搜索弹窗和 About 资料头部的视觉风格。网站标题、描述、分页、时区、页脚、SVG Favicon，以及 About 页头像和社交链接都可以在后台“设置”中维护。
 
-本项目以回退后的稳定界面版本为基础，仅进行了以下定点修改：
+技术与功能细节、数据库结构、路由和设计说明见 [PROJECT.md](./PROJECT.md)。
 
-- 后台导航移除左上角 `Blog Admin`。
-- 后台“控制台”改为“面板”。
-- 分类、标签管理页面改为左侧列表、右侧新增或编辑表单。
-- 项目、Worker、D1 和 R2 默认名称统一为 `worker-blog`。
-- 首页左上角站点名称使用 Winston 静态站的字号与字重。
-- 首页右侧日夜、搜索、菜单按钮使用 Winston 静态站中的 SVG 图标。
-- 手机端导航使用独立抽屉，展开宽度固定为 `100vw`。
-- 从 `winston.ink` 静态站生成 `seed.sql` 开发模拟数据。
-- 开发阶段不使用 migrations，数据库由 `schema.sql` 和 `seed.sql` 初始化。
+## 本地运行
 
-## 数据文件
+环境要求：
 
-### `schema.sql`
+- Node.js 22 或更高版本
+- npm
+- Cloudflare Wrangler
 
-包含六张业务表、索引、外键和分类/标签计数触发器：
-
-- `blog_contents`
-- `blog_metas`
-- `blog_relationships`
-- `blog_options`
-- `blog_cookies`
-- `blog_links`
-
-### `seed.sql`
-
-由附件中的 Winston 静态站生成，包含：
-
-- 34 篇文章和 1 个关于页面
-- 6 条闪念
-- 3 个分类
-- 7 个标签及文章关联
-- 5 条友链
-- 16 条静态附件模拟记录
-- Winston 站点名称、描述和分页配置
-
-种子正文保留静态站中的 HTML 和 `<!-- more -->` 摘要标记。静态图片与附件 URL 指向原 Winston 站点，仅作为开发模拟数据；新上传的附件仍会进入项目配置的 R2 Bucket。
-
-项目还保留了 `tools/generate_seed.py`，可以从解压后的 Winston 静态目录重新生成种子：
-
-```bash
-python tools/generate_seed.py /path/to/winston.ink -o seed.sql
-```
-
-生成脚本依赖 Python 与 BeautifulSoup 4；运行博客本身不需要 Python。
-
-## 项目结构
-
-```text
-worker-blog/
-├── schema.sql
-├── seed.sql
-├── tools/
-│   └── generate_seed.py
-├── src/
-│   ├── assets/
-│   ├── components/
-│   ├── lib/
-│   ├── routes/
-│   ├── index.tsx
-│   └── types.ts
-├── package.json
-├── tsconfig.json
-└── wrangler.toml
-```
-
-## 安装依赖
+安装依赖：
 
 ```bash
 npm install
 ```
 
-## 创建 Cloudflare 资源
+复制本地变量示例：
 
-创建 D1：
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+初始化本地 D1 数据库：
+
+```bash
+npm run db:reset:local
+```
+
+该命令会依次执行 `schema.sql` 和 `seed.sql`。`seed.sql` 会清空已有内容并写入开发模拟数据，请勿用于需要保留数据的数据库。
+
+启动本地开发服务：
+
+```bash
+npm run dev
+```
+
+访问地址：
+
+- 前台：`http://localhost:8787/`
+- 后台：`http://localhost:8787/admin`
+
+管理员账号来自 `.dev.vars` 或 `wrangler.toml` 中的 `ADMIN_NAME` 和 `ADMIN_PSWD`。项目示例统一使用密码 `12345678`。
+
+## 如何部署
+
+创建 D1 数据库：
 
 ```bash
 npx wrangler d1 create worker-blog
 ```
 
-把返回的数据库 ID 写入 `wrangler.toml`：
+将返回的数据库 ID 写入 `wrangler.toml`：
 
 ```toml
 [[d1_databases]]
@@ -102,80 +72,36 @@ database_id = "你的 D1 数据库 ID"
 npx wrangler r2 bucket create worker-blog-assets
 ```
 
-## 配置管理员
-
-开发阶段可以在 `wrangler.toml` 中配置：
+确认 `wrangler.toml` 中的 Bucket 名称一致：
 
 ```toml
-[vars]
-ADMIN_NAME = "admin"
-ADMIN_PSWD = "请修改为强密码"
-R2_PUBLIC_URL = ""
-MAX_UPLOAD_MB = "25"
+[[r2_buckets]]
+binding = "BLOG_R2"
+bucket_name = "worker-blog-assets"
 ```
 
-生产环境建议把密码改为 Worker Secret：
+生产环境使用 Secret 保存管理员密码时，值同样设为 `12345678`：
 
 ```bash
 npx wrangler secret put ADMIN_PSWD
 ```
 
-## 初始化开发数据库
-
-创建结构并导入模拟数据：
-
-```bash
-npm run db:reset:local
-```
-
-也可以分开运行：
-
-```bash
-npm run db:schema:local
-npm run db:seed:local
-```
-
-远程数据库：
+初始化远程数据库结构：
 
 ```bash
 npm run db:schema:remote
+```
+
+需要导入演示数据时再执行：
+
+```bash
 npm run db:seed:remote
 ```
 
-`seed.sql` 会清空现有博客内容后重新导入模拟数据，不应在已有正式内容的生产数据库中运行。
+`db:seed:remote` 会清空远程博客数据，正式站点通常不应执行。
 
-## 本地运行
-
-```bash
-npm run dev
-```
-
-- 前台：`http://localhost:8787/`
-- 后台：`http://localhost:8787/admin`
-- 默认开发管理员：查看 `wrangler.toml` 中的 `ADMIN_NAME` 和 `ADMIN_PSWD`
-
-## 部署
+部署 Worker：
 
 ```bash
 npm run deploy
 ```
-
-## 常用命令
-
-```bash
-npm run typecheck
-npm run cf-typegen
-npm run db:reset:local
-npm run db:schema:remote
-npm run db:seed:remote
-npm run deploy
-```
-
-## 登录与附件行为
-
-- 登录 Cookie 在 D1 中保存 10 天。
-- Cookie 剩余时间少于或等于 2 天时自动续期到 10 天。
-- 图片上传后插入 Markdown 图片语法。
-- 视频上传后插入 `<video>` 标签。
-- 其他文件上传后插入下载链接。
-- R2 文件代理支持视频 Range 请求。

@@ -4,6 +4,7 @@ import type { AppEnv, AttachmentInfo, BlogContent, BlogLink, BlogMeta, ContentSt
 import { AdminLayout, AdminPagination, LoginPage } from '../components/admin'
 import { createAdminSession, destroyAdminSession, requireAdmin, sameOriginOnly, verifyCredentials } from '../lib/auth'
 import { dbAll, dbFirst, dbRun } from '../lib/db'
+import { normalizeFaviconColor, normalizeFaviconText } from '../lib/favicon'
 import { renderMarkdown } from '../lib/markdown'
 import { getOptions, saveOptions } from '../lib/options'
 import {
@@ -422,14 +423,35 @@ adminRoutes.post('/admin/links/:id/delete', async (c) => {
 adminRoutes.get('/admin/options', async (c) => {
   const options = await getOptions(c.env.BLOG_DB)
   return c.html(
-    <AdminLayout title="系统设置" subtitle="站点信息与分页配置">
+    <AdminLayout title="系统设置" subtitle="站点信息、浏览器图标与分页配置">
       {c.req.query('saved') ? <div class="notice">设置已保存。</div> : null}
       <section class="panel"><div class="panel-body"><form method="post" action="/admin/options" class="main-form">
         <div class="field"><label>站点标题</label><input class="input" name="site_title" value={options.site_title} /></div>
+        <div class="settings-inline">
+          <div class="field">
+            <label for="favicon_text">FAVICON 文本</label>
+            <input class="input" id="favicon_text" name="favicon_text" value={options.favicon_text} maxLength={2} data-favicon-text />
+            <small class="muted">建议填写 1–2 个字符，例如 W、博。</small>
+          </div>
+          <div class="field">
+            <label for="favicon_color">FAVICON 颜色</label>
+            <div class="favicon-setting-row">
+              <input class="input favicon-color-text" id="favicon_color" name="favicon_color" value={options.favicon_color} placeholder="#999999" pattern="#[0-9A-Fa-f]{6}" data-favicon-color-text />
+              <input class="favicon-color-picker" type="color" value={options.favicon_color} aria-label="选择 FAVICON 颜色" data-favicon-color-picker />
+              <span class="favicon-preview" style={`--favicon-color:${options.favicon_color}`} data-favicon-preview>{options.favicon_text}</span>
+            </div>
+            <small class="muted">可输入六位十六进制颜色或使用颜色选择器，默认 #999999。</small>
+          </div>
+        </div>
         <div class="field"><label>站点描述</label><input class="input" name="site_description" value={options.site_description} /></div>
         <div class="field"><label>首页每页文章数</label><input class="input" name="posts_per_page" type="number" min="1" max="100" value={options.posts_per_page} /></div>
         <div class="field"><label>闪念每页数量</label><input class="input" name="memos_per_page" type="number" min="1" max="100" value={options.memos_per_page} /></div>
         <div class="field"><label>关于页面别名</label><input class="input" name="about_slug" value={options.about_slug} /></div>
+        <div class="field"><label>头像 URL</label><input class="input" name="about_avatar" value={options.about_avatar} placeholder="https://example.com/avatar.png" /></div>
+        <div class="field"><label>GitHub</label><input class="input" name="about_github" value={options.about_github} placeholder="https://github.com/username" /></div>
+        <div class="field"><label>X</label><input class="input" name="about_x" value={options.about_x} placeholder="https://x.com/username" /></div>
+        <div class="field"><label>RSS</label><input class="input" name="about_rss" value={options.about_rss} placeholder="/atom.xml 或完整 URL" /></div>
+        <div class="field"><label>邮箱</label><input class="input" name="about_email" value={options.about_email} placeholder="name@example.com" /></div>
         <div class="field"><label>时区</label><input class="input" name="site_timezone" value={options.site_timezone} placeholder="Asia/Shanghai" /></div>
         <div class="field"><label>页脚文字</label><input class="input" name="footer_text" value={options.footer_text} /></div>
         <button class="button primary" type="submit">保存设置</button>
@@ -440,11 +462,13 @@ adminRoutes.get('/admin/options', async (c) => {
 
 adminRoutes.post('/admin/options', async (c) => {
   const form = await c.req.formData()
-  const keys = ['site_title', 'site_description', 'posts_per_page', 'memos_per_page', 'about_slug', 'site_timezone', 'footer_text']
+  const keys = ['site_title', 'site_description', 'posts_per_page', 'memos_per_page', 'about_slug', 'about_avatar', 'about_github', 'about_x', 'about_rss', 'about_email', 'site_timezone', 'footer_text', 'favicon_text', 'favicon_color']
   const values: OptionMap = Object.fromEntries(keys.map((key) => [key, String(form.get(key) ?? '')]))
   values.posts_per_page = String(positiveInt(values.posts_per_page, 10, 100))
   values.memos_per_page = String(positiveInt(values.memos_per_page, 20, 100))
   values.about_slug = slugify(values.about_slug || 'about')
+  values.favicon_text = normalizeFaviconText(values.favicon_text, Array.from(values.site_title.trim())[0] || 'B')
+  values.favicon_color = normalizeFaviconColor(values.favicon_color)
   try { new Intl.DateTimeFormat('zh-CN', { timeZone: values.site_timezone }).format() } catch { values.site_timezone = 'Asia/Shanghai' }
   await saveOptions(c.env.BLOG_DB, values)
   return c.redirect('/admin/options?saved=1')

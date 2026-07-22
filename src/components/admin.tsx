@@ -21,6 +21,7 @@ export function AdminLayout({ title, subtitle, actions, children }: LayoutProps)
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>{title} · 博客后台</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="stylesheet" href="/assets/admin.css" />
       </head>
       <body>
@@ -55,6 +56,7 @@ export function LoginPage({ error, returnTo }: { error?: string; returnTo: strin
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>登录 · 博客后台</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="stylesheet" href="/assets/admin.css" />
       </head>
       <body class="login-page">

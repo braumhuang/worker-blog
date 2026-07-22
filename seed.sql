@@ -1273,6 +1273,13 @@ INSERT INTO blog_options(name,value) VALUES('about_slug','about');
 INSERT INTO blog_options(name,value) VALUES('footer_text','Stay Young Stay Simple');
 INSERT INTO blog_options(name,value) VALUES('site_timezone','Asia/Shanghai');
 INSERT INTO blog_options(name,value) VALUES('date_format','zh-CN');
+INSERT INTO blog_options(name,value) VALUES('favicon_text','W');
+INSERT INTO blog_options(name,value) VALUES('favicon_color','#999999');
+INSERT INTO blog_options(name,value) VALUES('about_avatar','https://winston.ink/images/avatar.png');
+INSERT INTO blog_options(name,value) VALUES('about_github','https://github.com/braumhuang');
+INSERT INTO blog_options(name,value) VALUES('about_x','https://x.com/braumhuang');
+INSERT INTO blog_options(name,value) VALUES('about_rss','https://winston.ink/feed.xml');
+INSERT INTO blog_options(name,value) VALUES('about_email','');
 
 -- Seed summary
 -- posts/pages: 35; memos: 6; attachments: 16;

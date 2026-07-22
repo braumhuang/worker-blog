@@ -89,6 +89,13 @@ export function readingMinutes(text: string): number {
   return Math.max(1, Math.ceil(cjk / 400 + words / 220))
 }
 
+export function wordCount(text: string): number {
+  const clean = stripMarkdown(text)
+  const cjk = (clean.match(/[\u3400-\u9fff]/g) ?? []).length
+  const words = (clean.replace(/[\u3400-\u9fff]/g, ' ').match(/[A-Za-z0-9]+/g) ?? []).length
+  return cjk + words
+}
+
 export function safeJson<T>(value: string, fallback: T): T {
   try {
     return JSON.parse(value) as T

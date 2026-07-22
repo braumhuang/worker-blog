@@ -18,6 +18,14 @@ type PublicLayoutProps = PropsWithChildren<{
   description?: string
 }>
 
+const Icon = ({ name }: { name: 'sun' | 'moon' | 'search' | 'menu' | 'arrow' }) => {
+  if (name === 'sun') return <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.41M17.66 6.34l1.41-1.41"/></svg>
+  if (name === 'moon') return <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+  if (name === 'search') return <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>
+  if (name === 'menu') return <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  return <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 5 7 7-7 7M19 12H5"/></svg>
+}
+
 export function PublicLayout({ options, title, active, canonical, description, children }: PublicLayoutProps) {
   const siteTitle = options.site_title
   const fullTitle = title ? `${title} · ${siteTitle}` : siteTitle
@@ -30,54 +38,43 @@ export function PublicLayout({ options, title, active, canonical, description, c
         <meta name="description" content={description || options.site_description} />
         <meta name="color-scheme" content="light dark" />
         <title>{fullTitle}</title>
+        <link rel="icon" type="image/svg+xml" href={`/favicon.svg?v=${encodeURIComponent(`${options.favicon_text}-${options.favicon_color}`)}`} />
         {canonical ? <link rel="canonical" href={canonical} /> : null}
         <link rel="stylesheet" href="/assets/public.css" />
-        <script dangerouslySetInnerHTML={{ __html: `try{const t=localStorage.getItem('blog-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `try{const t=localStorage.getItem('blog-theme');if(t)document.documentElement.dataset.theme=t;else if(matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.dataset.theme='dark'}catch(e){}` }} />
       </head>
       <body>
-        <header class="site-header">
+        <header class="header">
           <div class="header-inner">
-            <a class="brand" href="/">{siteTitle}</a>
-            <nav class="site-nav" aria-label="主导航">
-              {navItems.map(([href, label, key]) => (
-                <a href={href} class={active === key ? 'active' : undefined}>{label}</a>
-              ))}
-              <a href={`/post/${encodeURIComponent(aboutSlug)}/`} class={active === 'about' ? 'active' : undefined}>关于</a>
+            <a class="logo" href="/">{siteTitle}</a>
+            <nav class="nav" aria-label="主导航">
+              {navItems.map(([href, label, key]) => <a href={href} class={`nav-link${active === key ? ' active' : ''}`}>{label}</a>)}
+              <a href={`/post/${encodeURIComponent(aboutSlug)}/`} class={`nav-link${active === 'about' ? ' active' : ''}`}>关于</a>
             </nav>
             <div class="header-actions">
-              <button class="icon-button" type="button" data-theme-toggle title="切换主题" aria-label="切换深浅模式">
-                <svg class="header-icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                <svg class="header-icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-              </button>
-              <button class="icon-button" type="button" data-search-open title="搜索" aria-label="搜索">
-                <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              </button>
-              <button class="icon-button menu-button" type="button" data-menu-toggle aria-label="打开移动端菜单" aria-controls="mobile-nav" aria-expanded="false">
-                <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-              </button>
+              <button class="btn-icon" id="theme-toggle" type="button" data-theme-toggle title="切换主题" aria-label="切换深浅模式"><Icon name="sun"/><Icon name="moon"/></button>
+              <button class="btn-icon" type="button" data-search-open title="搜索" aria-label="搜索"><Icon name="search"/></button>
+              <button class="btn-icon mobile-menu-toggle" type="button" data-menu-toggle aria-label="打开移动端菜单" aria-controls="mobile-nav" aria-expanded="false"><Icon name="menu"/></button>
             </div>
           </div>
         </header>
         <nav class="mobile-nav" id="mobile-nav" aria-label="移动端导航">
-          {navItems.map(([href, label, key]) => (
-            <a href={href} class={active === key ? 'active' : undefined}>{label}</a>
-          ))}
-          <a href={`/post/${encodeURIComponent(aboutSlug)}/`} class={active === 'about' ? 'active' : undefined}>关于</a>
+          {navItems.map(([href, label, key]) => <a href={href} class={`mobile-nav-link${active === key ? ' active' : ''}`}>{label}</a>)}
+          <a href={`/post/${encodeURIComponent(aboutSlug)}/`} class={`mobile-nav-link${active === 'about' ? ' active' : ''}`}>关于</a>
         </nav>
-        <main class="site-main">{children}</main>
-        <footer class="site-footer">
-          <div class="footer-inner">
-            <span>{options.footer_text}</span>
-            <span>© {new Date().getFullYear()} {siteTitle} · Powered by Hono</span>
+        <main class="main"><div class="container">{children}</div></main>
+        <footer class="footer">
+          <div class="container">
+            {options.footer_text ? <div class="footer-text">{options.footer_text}</div> : null}
+            <div class="footer-copyright">© {new Date().getFullYear()} <a href="/">{siteTitle}</a> · <span class="footer-theme">Theme by <a href="https://github.com/Gridea-Pro/gridea-pro-themes/tree/main/themes/kehua" target="_blank" rel="noopener noreferrer">Kehua</a></span></div>
           </div>
         </footer>
+        <button class="back-to-top" type="button" data-back-to-top aria-label="回到顶部"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m18 15-6-6-6 6"/></svg></button>
         <div class="search-modal" data-search-modal role="dialog" aria-modal="true" aria-label="站内搜索">
-          <div class="search-box">
-            <div class="search-input-row">
-              <input data-search-input type="search" placeholder="输入关键词开始搜索" autocomplete="off" />
-              <button type="button" data-search-close>关闭</button>
-            </div>
-            <div class="search-results" data-search-results>输入关键词开始搜索 · 支持标题、正文、标签</div>
+          <div class="search-modal-content">
+            <div class="search-input-wrapper"><Icon name="search"/><input class="search-input" data-search-input type="search" placeholder="搜索标题、摘要、标签…" autocomplete="off"/><button class="search-close" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+            <div class="search-results" data-search-results><div class="search-empty">输入关键词开始搜索 · 支持标题 / 摘要 / 标签</div></div>
+            <div class="search-shortcuts"><span><kbd>↵</kbd> 打开</span><span><kbd>↑</kbd><kbd>↓</kbd> 切换</span><span><kbd>esc</kbd> 关闭</span></div>
           </div>
         </div>
         <script src="/assets/public.js" defer></script>
@@ -87,33 +84,29 @@ export function PublicLayout({ options, title, active, canonical, description, c
 }
 
 export function PageHeading({ title, subtitle }: { title: string; subtitle?: string }) {
-  return <header class="page-heading"><h1>{title}</h1>{subtitle ? <p>{subtitle}</p> : null}</header>
+  return <header class="category-header"><h1 class="category-title">{title}</h1>{subtitle ? <p class="category-desc">{subtitle}</p> : null}</header>
 }
 
-export function PostMeta({ created, categories = [], reading, timeZone = 'Asia/Shanghai' }: { created: number; categories?: BlogMeta[]; reading?: number; timeZone?: string }) {
-  return (
-    <div class="post-meta">
-      <span>{formatDate(created, false, timeZone)}</span>
-      {categories.length ? <span>{categories.map((category, index) => <>{index ? '、' : ''}<a href={`/category/${encodeURIComponent(category.slug)}/`}>{category.name}</a></>)}</span> : null}
-      {reading ? <span>{reading} 分钟阅读</span> : null}
-    </div>
-  )
+export function PostMeta({ created, categories = [], reading, words, timeZone = 'Asia/Shanghai', article = false }: { created: number; categories?: BlogMeta[]; reading?: number; words?: number; timeZone?: string; article?: boolean }) {
+  const bits: any[] = [<span>{formatDate(created, false, timeZone)}</span>]
+  if (categories.length) bits.push(<span class={article ? 'article-category' : 'post-category'}>{categories.map((category, index) => <>{index ? '、' : ''}<a href={`/category/${encodeURIComponent(category.slug)}/`}>{category.name}</a></>)}</span>)
+  if (reading) bits.push(<span>{reading} 分钟阅读</span>)
+  if (words) bits.push(<span>{words} 字</span>)
+  return <div class={article ? 'article-meta' : 'post-meta'}>{bits.map((bit, index) => <>{index ? <span class={article ? 'article-meta-sep' : 'post-meta-sep'}>·</span> : null}{bit}</>)}</div>
 }
 
 export function Pagination({ page, totalPages, path }: { page: number; totalPages: number; path: string }) {
   if (totalPages <= 1) return null
   const separator = path.includes('?') ? '&' : '?'
   const url = (target: number) => `${path}${separator}page=${target}`
-  return (
-    <nav class="pagination" aria-label="分页">
-      {page > 1 ? <a href={url(page - 1)}>← 上一页</a> : <span>← 上一页</span>}
-      <span>{page} / {totalPages}</span>
-      {page < totalPages ? <a href={url(page + 1)}>下一页 →</a> : <span>下一页 →</span>}
-    </nav>
-  )
+  return <nav class="pagination" aria-label="分页">
+    {page > 1 ? <a class="pagination-item" href={url(page - 1)}>← 上一页</a> : <span class="pagination-item pagination-disabled">← 上一页</span>}
+    <span class="pagination-info">第 {page} / {totalPages} 页</span>
+    {page < totalPages ? <a class="pagination-item" href={url(page + 1)}>下一页 →</a> : <span class="pagination-item pagination-disabled">下一页 →</span>}
+  </nav>
 }
 
 export function MetaPills({ tags }: { tags: BlogMeta[] }) {
   if (!tags.length) return null
-  return <div class="article-tags">{tags.map((tag) => <a class="tag-pill" href={`/tag/${encodeURIComponent(tag.slug)}/`}>#{tag.name}</a>)}</div>
+  return <div class="article-tags"><span class="tag-label">标签：</span>{tags.map((tag) => <a href={`/tag/${encodeURIComponent(tag.slug)}/`}>{tag.name}</a>)}</div>
 }
