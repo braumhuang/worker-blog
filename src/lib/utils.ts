@@ -36,7 +36,7 @@ export function draftSlug(type: ContentType): string {
 
 export function formatDate(timestamp: number, includeTime = false, timeZone = 'Asia/Shanghai'): string {
   const options: Intl.DateTimeFormatOptions = includeTime
-    ? { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone }
+    ? { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }
     : { year: 'numeric', month: '2-digit', day: '2-digit', timeZone }
   return new Intl.DateTimeFormat('zh-CN', options).format(new Date(timestamp * 1000)).replaceAll('/', '-')
 }
@@ -49,16 +49,37 @@ export function isoDate(timestamp: number, timeZone = 'Asia/Shanghai'): string {
   return `${pick('year')}-${pick('month')}-${pick('day')}`
 }
 
-export function datetimeLocal(timestamp: number): string {
-  const date = new Date(timestamp * 1000)
-  const pad = (v: number) => String(v).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+function dateParts(timestampMs: number, timeZone: string): Record<string, number> {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23', timeZone,
+  }).formatToParts(new Date(timestampMs))
+  return Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]))
 }
 
-export function parseDatetimeLocal(value: string, fallback: number): number {
-  if (!value) return fallback
-  const ms = Date.parse(value)
-  return Number.isNaN(ms) ? fallback : Math.floor(ms / 1000)
+export function datetimeLocal(timestamp: number, timeZone = 'Asia/Shanghai'): string {
+  const parts = dateParts(timestamp * 1000, timeZone)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}`
+}
+
+export function parseDatetimeLocal(value: string, fallback: number, timeZone = 'Asia/Shanghai'): number {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value)
+  if (!match) return fallback
+  const [, yearText, monthText, dayText, hourText, minuteText] = match
+  const wallTime = Date.UTC(Number(yearText), Number(monthText) - 1, Number(dayText), Number(hourText), Number(minuteText), 0)
+  let instant = wallTime
+  try {
+    for (let index = 0; index < 3; index += 1) {
+      const parts = dateParts(instant, timeZone)
+      const represented = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)
+      instant += wallTime - represented
+    }
+  } catch {
+    return fallback
+  }
+  return Math.floor(instant / 1000)
 }
 
 export function stripMarkdown(markdown: string): string {

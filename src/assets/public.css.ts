@@ -978,80 +978,72 @@ body.mobile-nav-open {
 .comments-section {
     max-width: var(--container-width);
     margin: var(--spacing-2xl) auto 0;
-    padding: 0 var(--spacing-lg);
 }
 
 .comments-title {
     font-size: 1.25rem;
     font-weight: 600;
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: var(--spacing-lg);
 }
 
-.comments-placeholder {
-    padding: var(--spacing-xl);
-    background-color: var(--color-bg-secondary);
-    border: 1px dashed var(--color-border);
-    border-radius: var(--radius-md);
-}
-
-.comments-placeholder-note {
-    margin-top: var(--spacing-md);
-    font-size: 0.8125rem;
+.comments-title span {
+    margin-left: var(--spacing-xs);
     color: var(--color-text-muted);
-    line-height: 1.6;
-    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 400;
 }
 
-.comment-form-skeleton .comment-textarea {
-    width: 100%;
-    min-height: 96px;
-    padding: var(--spacing-md);
-    border: 1px solid var(--color-border);
+.comment-notice {
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
+}
+
+.comment-form {
+    margin-bottom: var(--spacing-2xl);
+    padding: var(--spacing-lg);
+    background-color: var(--color-bg-secondary);
     border-radius: var(--radius-md);
-    background-color: var(--color-bg);
-    color: var(--color-text);
-    resize: vertical;
-    transition: border-color var(--transition-fast);
-}
-
-.comment-form-skeleton .comment-textarea:focus {
-    outline: none;
-    border-color: var(--color-primary);
-}
-
-.comment-form-footer {
-    margin-top: var(--spacing-md);
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
 }
 
 .comment-form-info {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
 }
 
-.comment-input {
+.comment-input,
+.comment-textarea {
     width: 100%;
     padding: var(--spacing-sm) var(--spacing-md);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background-color: var(--color-bg);
     color: var(--color-text);
-    transition: border-color var(--transition-fast);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.comment-input:focus {
+.comment-textarea {
+    min-height: 112px;
+    resize: vertical;
+    line-height: 1.7;
+}
+
+.comment-input:focus,
+.comment-textarea:focus {
     outline: none;
     border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.08);
 }
 
 .comment-form-actions {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
 }
 
 .comment-submit {
@@ -1063,6 +1055,7 @@ body.mobile-nav-open {
     border-radius: var(--radius-sm);
     font-size: 0.875rem;
     line-height: 1.5;
+    cursor: pointer;
     transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
@@ -1070,12 +1063,6 @@ body.mobile-nav-open {
     background-color: var(--color-primary-hover);
 }
 
-.comment-submit:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* 实际评论列表（如果第三方评论服务渲染了 .comment 等元素） */
 .comments-list {
     display: flex;
     flex-direction: column;
@@ -1085,7 +1072,6 @@ body.mobile-nav-open {
 
 .comment {
     display: flex;
-    flex-wrap: wrap;
     gap: var(--spacing-md);
 }
 
@@ -1093,38 +1079,51 @@ body.mobile-nav-open {
     flex-shrink: 0;
     width: 40px;
     height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: var(--radius-full);
-    overflow: hidden;
+    color: var(--color-text-secondary);
     background-color: var(--color-bg-secondary);
-}
-
-.comment-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    font-size: 0.875rem;
+    font-weight: 600;
 }
 
 .comment-body { flex: 1; min-width: 0; }
 
 .comment-header {
     display: flex;
-    align-items: center;
+    align-items: baseline;
+    flex-wrap: wrap;
     gap: var(--spacing-sm);
     margin-bottom: var(--spacing-xs);
 }
 
-.comment-author {
-    font-weight: 600;
-}
-
-.comment-date {
-    font-size: 0.8125rem;
-    color: var(--color-text-muted);
-}
-
+.comment-author { font-weight: 600; }
+.comment-date { font-size: 0.8125rem; color: var(--color-text-muted); }
 .comment-content {
     color: var(--color-text-secondary);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
+
+.comments-empty {
+    padding: var(--spacing-lg);
+    color: var(--color-text-muted);
+    text-align: center;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.comment-pagination {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--spacing-md);
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
+.comment-pagination a:last-child { text-align: right; }
 
 /* =========================================================
    9. 关于 / 友链
@@ -1460,7 +1459,7 @@ body.mobile-nav-open {
     padding: var(--spacing-lg);
     background-color: var(--color-bg-secondary);
     border-radius: var(--radius-lg);
-    overflow-x: auto;
+    overflow: hidden;
 }
 
 .memo-heatmap-stats {
@@ -1472,6 +1471,13 @@ body.mobile-nav-open {
 .memo-heatmap-stats strong {
     color: var(--color-primary);
     font-size: 1.125rem;
+}
+
+.memo-heatmap-scroll {
+    margin: 0 calc(var(--spacing-lg) * -1);
+    padding: var(--spacing-md) var(--spacing-lg);
+    overflow-x: auto;
+    scrollbar-width: thin;
 }
 
 .memo-heatmap {
@@ -1577,6 +1583,16 @@ body.mobile-nav-open {
     border-radius: var(--radius-sm);
     margin-top: var(--spacing-sm);
 }
+
+.memo-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs) var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+    font-size: 0.8125rem;
+}
+
+.memo-tags a { color: var(--color-primary); }
 
 .memo-date {
     display: block;
@@ -1806,6 +1822,7 @@ body.mobile-nav-open {
     .post-with-thumb { flex-direction: column; }
 
     .post-thumb {
+        order: -1;
         width: 100%;
         height: 0;
         padding-bottom: 56%;

@@ -12,9 +12,7 @@
     "db:schema:remote": "wrangler d1 execute BLOG_DB --remote --file=./schema.sql",
     "db:seed:local": "wrangler d1 execute BLOG_DB --local --file=./seed.sql",
     "db:seed:remote": "wrangler d1 execute BLOG_DB --remote --file=./seed.sql",
-    "db:reset:local": "npm run db:schema:local && npm run db:seed:local",
-    "db:migrate:cover:local": "wrangler d1 execute BLOG_DB --local --file=./migrations/0001_add_content_cover.sql",
-    "db:migrate:cover:remote": "wrangler d1 execute BLOG_DB --remote --file=./migrations/0001_add_content_cover.sql"
+    "db:reset:local": "npm run db:schema:local && npm run db:seed:local"
   },
   "dependencies": {
     "hono": "^4.12.30",

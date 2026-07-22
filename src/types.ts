@@ -26,6 +26,7 @@ export interface BlogContent {
   slug: string
   created: number
   modified: number
+  released: number
   text: string
   cover: string
   type: ContentType
@@ -48,6 +49,16 @@ export interface BlogLink {
   icon: string
   info: string
   order: number
+}
+
+export interface BlogComment {
+  id: number
+  name: string
+  email: string
+  site: string
+  text: string
+  created: number
+  cid: number
 }
 
 export interface AttachmentInfo {

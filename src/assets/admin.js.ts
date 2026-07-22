@@ -123,6 +123,32 @@ export const adminJs = String.raw`
     fileInput.value = '';
   });
 
+  const coverUpload = $('[data-cover-upload]');
+  const coverUrl = $('[data-cover-url]');
+  const coverStatus = $('[data-cover-status]');
+  coverUpload?.addEventListener('change', async () => {
+    const file = coverUpload.files?.[0];
+    if (!file) return;
+    if (coverStatus) coverStatus.textContent = '正在上传 ' + file.name + '…';
+    const body = new FormData();
+    body.append('file', file);
+    body.append('cid', coverUpload.dataset.cid || '');
+    try {
+      const response = await fetch('/admin/api/attachments', { method: 'POST', body });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || '上传失败');
+      if (coverUrl) {
+        coverUrl.value = data.attachment.url;
+        coverUrl.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (coverStatus) coverStatus.textContent = '封面上传完成，保存内容后生效。';
+    } catch (error) {
+      if (coverStatus) coverStatus.textContent = error instanceof Error ? error.message : '上传失败';
+    } finally {
+      coverUpload.value = '';
+    }
+  });
+
   const tagsRoot = $('[data-tags]');
   if (tagsRoot) {
     const hidden = $('[data-tags-hidden]', tagsRoot);

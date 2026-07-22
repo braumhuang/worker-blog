@@ -245,6 +245,24 @@ input[type="checkbox"], input[type="radio"] { margin: 0 3px 0 0; vertical-align:
 .side-box-body > .field + .field { margin-top: 11px; }
 .side-box-body > .button.primary { margin-top: 1px; }
 .cover-url-field { margin-bottom: 1px; }
+.input-action-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
+.input-action-row .button { min-height: 36px; }
+.memo-editor-note {
+  padding: 10px 12px;
+  color: #666;
+  background: #f4f7f8;
+  border-left: 3px solid var(--admin-primary);
+}
+.readonly-value {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 7px 9px;
+  color: #777;
+  background: #f7f7f4;
+  border: 1px solid var(--admin-line-light);
+  border-radius: 2px;
+}
 
 /* Markdown editor */
 .editor-panel {
@@ -413,15 +431,28 @@ tr:hover .row-actions { opacity: 1; }
 .pagination-admin span { color: #444; background: var(--admin-soft); }
 
 /* dashboard, settings and split views */
-.stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+.stats-grid { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 12px; }
 .stat { padding: 18px 20px; background: var(--admin-soft); }
 .stat strong { display: block; color: #444; font: 30px/1.2 Georgia, serif; font-weight: 400; }
 .stat span { color: var(--admin-muted); }
 .dashboard-columns { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; margin-top: 20px; }
 .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .meta-columns { grid-template-columns: minmax(0,1.55fr) minmax(280px,.75fr); }
-.meta-list-panel, .meta-form-panel { min-width: 0; }
+.meta-list-panel, .meta-form-panel,
+.link-list-panel, .link-form-panel { min-width: 0; }
+.link-columns { grid-template-columns: minmax(0, 1.55fr) minmax(280px, .75fr); }
+.comments-admin-table th:nth-child(1) { width: 22%; }
+.comments-admin-table th:nth-child(2) { width: 38%; }
+.comments-admin-table th:nth-child(3) { width: 23%; }
+.comments-admin-table th:nth-child(4) { width: 17%; }
+.comment-text-cell { white-space: pre-wrap; overflow-wrap: anywhere; }
+.comment-edit-text { min-height: 220px; }
+.comment-context { padding: 10px 12px; color: #666; background: var(--admin-bg); }
+.comment-context span { color: var(--admin-muted); }
 .settings-inline { display: grid; grid-template-columns: minmax(180px,.75fr) minmax(300px,1.25fr); gap: 16px; }
+.settings-three-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.option-check { padding: 11px 12px; background: var(--admin-bg); }
+.option-check label { margin-bottom: 2px; }
 .favicon-setting-row { display: grid; grid-template-columns: minmax(150px,1fr) 42px 42px; gap: 8px; align-items: center; }
 .favicon-color-text { min-width: 0; }
 .favicon-color-picker { width: 42px; height: 36px; padding: 2px; background: #fff; border: 1px solid var(--admin-line); border-radius: 2px; cursor: pointer; }
@@ -454,7 +485,7 @@ tr:hover .row-actions { opacity: 1; }
   .admin-mobile-menu { display: block; }
   .form-grid { grid-template-columns: minmax(0,1fr) 250px; gap: 14px; }
   .two-columns, .dashboard-columns, .settings-inline { grid-template-columns: 1fr; }
-  .meta-columns { grid-template-columns: 1fr; }
+  .meta-columns, .link-columns, .settings-three-columns { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 767px) {
@@ -464,6 +495,7 @@ tr:hover .row-actions { opacity: 1; }
   .side-form { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .side-form .side-box:first-child { grid-column: 1 / -1; }
   .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .comments-admin-table th:nth-child(n) { width: auto; }
   .editor-workspace.preview-visible { grid-template-columns: 1fr; }
   .editor-preview { border-left: 0; border-top: 1px solid var(--admin-line-light); }
   .admin-table { border-width: 10px; }
@@ -485,6 +517,7 @@ tr:hover .row-actions { opacity: 1; }
   .admin-mobile-panel nav { grid-template-columns: 1fr; }
   .panel:has(.admin-table) { overflow-x: auto; }
   .admin-table { min-width: 620px; }
+  .comments-admin-table { min-width: 760px; }
   .row-actions { opacity: 1; }
 }
 `

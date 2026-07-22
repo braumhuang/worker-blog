@@ -1,12 +1,12 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
-import type { AppEnv, AttachmentInfo, BlogContent, BlogLink, BlogMeta, ContentStatus, ContentType, MetaType, OptionMap } from '../types'
+import type { AppEnv, AttachmentInfo, BlogComment, BlogContent, BlogLink, BlogMeta, ContentStatus, ContentType, MetaType, OptionMap } from '../types'
 import { AdminLayout, AdminPagination, LoginPage } from '../components/admin'
 import { createAdminSession, destroyAdminSession, requireAdmin, sameOriginOnly, verifyCredentials } from '../lib/auth'
 import { dbAll, dbFirst, dbRun } from '../lib/db'
 import { normalizeFaviconColor, normalizeFaviconText } from '../lib/favicon'
 import { renderMarkdown } from '../lib/markdown'
-import { getOptions, saveOptions } from '../lib/options'
+import { getOptions, saveOptions, TIMEZONE_OPTIONS, TIMEZONE_VALUES } from '../lib/options'
 import {
   attachmentInfo,
   datetimeLocal,
@@ -31,6 +31,12 @@ const typeLabels: Record<ContentType, string> = {
 }
 const statusLabels: Record<ContentStatus, string> = {
   publish: '已发布', draft: '草稿', hidden: '隐藏',
+}
+
+type AdminCommentRow = BlogComment & {
+  content_title: string
+  content_slug: string
+  content_type: ContentType
 }
 
 function validContentType(value: string | undefined, fallback: ContentType = 'post'): ContentType {
@@ -124,6 +130,7 @@ adminRoutes.get('/admin/logout', async (c) => {
 })
 
 adminRoutes.get('/admin', async (c) => {
+  const options = await getOptions(c.env.BLOG_DB)
   const counts = await dbAll<{ type: ContentType; status: ContentStatus; total: number }>(c.env.BLOG_DB, `
     SELECT type, status, COUNT(*) AS total FROM blog_contents
     WHERE type != 'attachment' GROUP BY type, status
@@ -131,23 +138,26 @@ adminRoutes.get('/admin', async (c) => {
   const count = (type: ContentType, status?: ContentStatus) => counts.filter((row) => row.type === type && (!status || row.status === status)).reduce((sum, row) => sum + row.total, 0)
   const recent = await dbAll<BlogContent>(c.env.BLOG_DB, "SELECT * FROM blog_contents WHERE type IN ('post','page','memo') ORDER BY modified DESC LIMIT 8")
   const links = await dbFirst<{ total: number }>(c.env.BLOG_DB, 'SELECT COUNT(*) AS total FROM blog_links')
+  const comments = await dbFirst<{ total: number }>(c.env.BLOG_DB, 'SELECT COUNT(*) AS total FROM blog_comments')
   return c.html(
     <AdminLayout title="面板" subtitle="欢迎回来，下面是站点概况。" actions={<a class="button primary" href="/admin/content/new?type=post">写文章</a>}>
       <section class="stats-grid">
         <div class="panel stat"><strong>{count('post')}</strong><span>文章</span></div>
         <div class="panel stat"><strong>{count('page')}</strong><span>页面</span></div>
         <div class="panel stat"><strong>{count('memo')}</strong><span>闪念</span></div>
+        <div class="panel stat"><strong>{comments?.total ?? 0}</strong><span>评论</span></div>
         <div class="panel stat"><strong>{links?.total ?? 0}</strong><span>友链</span></div>
       </section>
       <div class="dashboard-columns">
-        <section class="panel"><div class="panel-body"><h3>最近编辑</h3><table class="admin-table"><tbody>{recent.map((item) => <tr><td><a href={`/admin/content/${item.cid}`}>{item.title || stripMarkdown(item.text).slice(0, 24) || '未命名'}</a></td><td>{typeLabels[item.type]}</td><td class="muted">{formatDate(item.modified, true)}</td></tr>)}</tbody></table></div></section>
-        <section class="panel"><div class="panel-body"><h3>快捷入口</h3><p><a href="/admin/content/new?type=post">撰写文章</a></p><p><a href="/admin/content/new?type=memo">发布闪念</a></p><p><a href="/admin/attachments">上传附件</a></p><p><a href="/admin/options">站点设置</a></p></div></section>
+        <section class="panel"><div class="panel-body"><h3>最近编辑</h3><table class="admin-table"><tbody>{recent.map((item) => <tr><td><a href={`/admin/content/${item.cid}`}>{item.title || stripMarkdown(item.text).slice(0, 24) || '未命名'}</a></td><td>{typeLabels[item.type]}</td><td class="muted">{formatDate(item.modified, true, options.site_timezone)}</td></tr>)}</tbody></table></div></section>
+        <section class="panel"><div class="panel-body"><h3>快捷入口</h3><p><a href="/admin/content/new?type=post">撰写文章</a></p><p><a href="/admin/content/new?type=memo">发布闪念</a></p><p><a href="/admin/comments">管理评论</a></p><p><a href="/admin/attachments">上传附件</a></p><p><a href="/admin/options">站点设置</a></p></div></section>
       </div>
     </AdminLayout>,
   )
 })
 
 adminRoutes.get('/admin/contents', async (c) => {
+  const options = await getOptions(c.env.BLOG_DB)
   const type = validContentType(c.req.query('type'))
   const status = c.req.query('status') as ContentStatus | undefined
   const page = positiveInt(c.req.query('page'), 1, 100000)
@@ -157,8 +167,9 @@ adminRoutes.get('/admin/contents', async (c) => {
   const args = statusFilter ? [type, statusFilter] : [type]
   const countRow = await dbFirst<{ total: number }>(c.env.BLOG_DB, `SELECT COUNT(*) AS total FROM blog_contents ${where}`, ...args)
   const total = countRow?.total ?? 0
-  const rows = await dbAll<BlogContent>(c.env.BLOG_DB, `SELECT * FROM blog_contents ${where} ORDER BY modified DESC LIMIT ? OFFSET ?`, ...args, perPage, (page - 1) * perPage)
+  const rows = await dbAll<BlogContent>(c.env.BLOG_DB, `SELECT * FROM blog_contents ${where} ORDER BY released DESC, cid DESC LIMIT ? OFFSET ?`, ...args, perPage, (page - 1) * perPage)
   const basePath = `/admin/contents?type=${type}${statusFilter ? `&status=${statusFilter}` : ''}`
+  const now = nowSeconds()
   return c.html(
     <AdminLayout title={`${typeLabels[type]}管理`} subtitle={`共 ${total} 条`} actions={<a class="button primary" href={`/admin/content/new?type=${type}`}>新增{typeLabels[type]}</a>}>
       <div class="toolbar-line filter-tabs">
@@ -167,11 +178,11 @@ adminRoutes.get('/admin/contents', async (c) => {
         <a class={statusFilter === 'draft' ? 'active' : undefined} href={`/admin/contents?type=${type}&status=draft`}>草稿</a>
         <a class={statusFilter === 'hidden' ? 'active' : undefined} href={`/admin/contents?type=${type}&status=hidden`}>隐藏</a>
       </div>
-      <section class="panel"><table class="admin-table"><thead><tr><th>标题</th><th>状态</th><th>创建时间</th><th>修改时间</th></tr></thead><tbody>
+      <section class="panel"><table class="admin-table"><thead><tr><th>标题</th><th>状态</th><th>发布时间</th><th>创建时间</th><th>修改时间</th></tr></thead><tbody>
         {rows.length ? rows.map((item) => <tr>
-          <td class="title-cell"><strong><a href={`/admin/content/${item.cid}`}>{item.title || stripMarkdown(item.text).slice(0, 32) || '未命名'}</a></strong><div class="row-actions"><a href={`/admin/content/${item.cid}`}>编辑</a>{item.status === 'publish' && item.type !== 'memo' ? <a href={`/post/${encodeURIComponent(item.slug)}/`} target="_blank">查看</a> : null}<form class="inline-form" method="post" action={`/admin/content/${item.cid}/delete`}><button class="button small danger" type="submit" data-confirm="确定删除这条内容吗？">删除</button></form></div></td>
-          <td><span class={`status ${item.status}`}>{statusLabels[item.status]}</span></td><td>{formatDate(item.created)}</td><td>{formatDate(item.modified, true)}</td>
-        </tr>) : <tr><td colspan={4} class="empty-state">暂无内容</td></tr>}
+          <td class="title-cell"><strong><a href={`/admin/content/${item.cid}`}>{item.title || stripMarkdown(item.text).slice(0, 32) || '未命名'}</a></strong><div class="row-actions"><a href={`/admin/content/${item.cid}`}>编辑</a>{item.status === 'publish' && item.type !== 'memo' && item.released <= now ? <a href={`/post/${encodeURIComponent(item.slug)}/`} target="_blank">查看</a> : null}<form class="inline-form" method="post" action={`/admin/content/${item.cid}/delete`}><button class="button small danger" type="submit" data-confirm="确定删除这条内容吗？">删除</button></form></div></td>
+          <td><span class={`status ${item.status}`}>{statusLabels[item.status]}</span></td><td>{formatDate(item.released, true, options.site_timezone)}</td><td>{formatDate(item.created, true, options.site_timezone)}</td><td>{formatDate(item.modified, true, options.site_timezone)}</td>
+        </tr>) : <tr><td colspan={5} class="empty-state">暂无内容</td></tr>}
       </tbody></table></section>
       <AdminPagination page={page} totalPages={Math.max(1, Math.ceil(total / perPage))} path={basePath} />
     </AdminLayout>,
@@ -182,7 +193,10 @@ adminRoutes.get('/admin/content/new', async (c) => {
   const type = validContentType(c.req.query('type'))
   if (type === 'attachment') return c.redirect('/admin/attachments')
   const now = nowSeconds()
-  const result = await dbRun(c.env.BLOG_DB, `INSERT INTO blog_contents(title, slug, created, modified, text, type, status) VALUES('', ?, ?, ?, '', ?, 'draft')`, draftSlug(type), now, now, type)
+  const title = type === 'memo'
+    ? formatDate(now, true, (await getOptions(c.env.BLOG_DB)).site_timezone)
+    : ''
+  const result = await dbRun(c.env.BLOG_DB, `INSERT INTO blog_contents(title, slug, created, modified, released, text, type, status) VALUES(?, ?, ?, ?, ?, '', ?, 'draft')`, title, draftSlug(type), now, now, now, type)
   return c.redirect(`/admin/content/${Number(result.meta.last_row_id)}`)
 })
 
@@ -190,7 +204,8 @@ adminRoutes.get('/admin/content/:cid', async (c) => {
   const cid = intValue(c.req.param('cid'))
   const content = await dbFirst<BlogContent>(c.env.BLOG_DB, 'SELECT * FROM blog_contents WHERE cid = ? LIMIT 1', cid)
   if (!content || content.type === 'attachment') return c.notFound()
-  const categories = await dbAll<BlogMeta>(c.env.BLOG_DB, "SELECT * FROM blog_metas WHERE type = 'category' ORDER BY name COLLATE NOCASE")
+  const options = await getOptions(c.env.BLOG_DB)
+  const categories = content.type === 'memo' ? [] : await dbAll<BlogMeta>(c.env.BLOG_DB, "SELECT * FROM blog_metas WHERE type = 'category' ORDER BY name COLLATE NOCASE")
   const assigned = await dbAll<BlogMeta>(c.env.BLOG_DB, 'SELECT m.* FROM blog_metas m JOIN blog_relationships r ON r.mid = m.mid WHERE r.cid = ? ORDER BY m.name COLLATE NOCASE', cid)
   const assignedCategoryIds = new Set(assigned.filter((meta) => meta.type === 'category').map((meta) => meta.mid))
   const assignedTags = assigned.filter((meta) => meta.type === 'tag')
@@ -200,9 +215,11 @@ adminRoutes.get('/admin/content/:cid', async (c) => {
       {c.req.query('saved') ? <div class="notice">保存成功。</div> : null}
       <form method="post" action={`/admin/content/${cid}`} class="form-grid">
         <div class="main-form">
-          <div class="field"><label for="title">标题</label><input class="input" id="title" name="title" value={content.title} placeholder={content.type === 'memo' ? '可选，留空自动生成' : '请输入标题'} /></div>
-          <div class="field"><label for="slug">URL 别名</label><input class="input" id="slug" name="slug" value={content.slug.includes('-draft-') ? '' : content.slug} placeholder="留空根据标题生成" /></div>
-          {content.type !== 'memo' ? <div class="field cover-url-field"><label for="cover">封面 URL</label><input class="input" id="cover" name="cover" type="text" inputMode="url" value={content.cover || ''} placeholder="https://example.com/cover.jpg 或 /uploads/cover.jpg" /></div> : null}
+          {content.type !== 'memo' ? <>
+            <div class="field"><label for="title">标题</label><input class="input" id="title" name="title" value={content.title} placeholder="请输入标题" /></div>
+            <div class="field"><label for="slug">URL 别名</label><input class="input" id="slug" name="slug" value={content.slug.includes('-draft-') ? '' : content.slug} placeholder="留空根据标题生成" /></div>
+            <div class="field cover-url-field"><label for="cover">封面 URL</label><div class="input-action-row"><input class="input" id="cover" name="cover" type="text" inputMode="url" value={content.cover || ''} placeholder="https://example.com/cover.jpg 或 /uploads/cover.jpg" data-cover-url /><label class="button" for="cover-upload">上传</label><input id="cover-upload" type="file" accept="image/*" data-cover-upload data-cid={cid} hidden /></div><small class="muted" data-cover-status></small></div>
+          </> : <div class="memo-editor-note">闪念标题会根据发布时间自动生成，格式为“{formatDate(content.released, true, options.site_timezone)}”。</div>}
           <div class="editor-panel" data-editor-panel>
             <EditorToolbar />
             <div class="editor-workspace">
@@ -215,10 +232,11 @@ adminRoutes.get('/admin/content/:cid', async (c) => {
           <section class="side-box"><h3>发布</h3><div class="side-box-body">
             <div class="field"><span>状态</span><select class="select" name="status"><option value="draft" selected={content.status === 'draft'}>草稿</option><option value="publish" selected={content.status === 'publish'}>发布</option></select></div>
             <div class="field"><label><input type="checkbox" name="hidden" value="1" checked={content.status === 'hidden'} /> 隐藏内容</label></div>
-            <div class="field"><label for="created">发布时间</label><input class="input" id="created" name="created" type="datetime-local" value={datetimeLocal(content.created)} /></div>
+            <div class="field"><span>创建时间</span><div class="readonly-value">{formatDate(content.created, true, options.site_timezone)}</div></div>
+            <div class="field"><label for="released">发布时间</label><input class="input" id="released" name="released" type="datetime-local" value={datetimeLocal(content.released, options.site_timezone)} /></div>
             <button class="button primary" type="submit">保存</button>
           </div></section>
-          <section class="side-box"><h3>分类</h3><div class="side-box-body checkbox-list">{categories.length ? categories.map((category) => <label><input type="checkbox" name="categories" value={category.mid} checked={assignedCategoryIds.has(category.mid)} /> {category.name}</label>) : <span class="muted">请先创建分类</span>}</div></section>
+          {content.type !== 'memo' ? <section class="side-box"><h3>分类</h3><div class="side-box-body checkbox-list">{categories.length ? categories.map((category) => <label><input type="checkbox" name="categories" value={category.mid} checked={assignedCategoryIds.has(category.mid)} /> {category.name}</label>) : <span class="muted">请先创建分类</span>}</div></section> : null}
           <section class="side-box"><h3>标签</h3><div class="side-box-body"><div class="tags-input" data-tags>{assignedTags.map((tag) => <span class="tag-chip"><span>{tag.name}</span><button type="button">×</button></span>)}<input type="text" placeholder="输入后回车" /><input type="hidden" name="tags" data-tags-hidden /></div></div></section>
           <section class="side-box"><h3>附件</h3><div class="side-box-body"><label class="button" for="content-upload">上传到 R2</label><input id="content-upload" data-upload-input data-cid={cid} type="file" multiple hidden /><div class="progress" data-upload-status></div><hr /><AttachmentRows rows={attachments} /></div></section>
         </aside>
@@ -231,24 +249,27 @@ adminRoutes.post('/admin/content/:cid', async (c) => {
   const cid = intValue(c.req.param('cid'))
   const current = await dbFirst<BlogContent>(c.env.BLOG_DB, 'SELECT * FROM blog_contents WHERE cid = ? LIMIT 1', cid)
   if (!current || current.type === 'attachment') return c.notFound()
+  const options = await getOptions(c.env.BLOG_DB)
   const form = await c.req.formData()
   const text = String(form.get('text') ?? '')
+  const released = parseDatetimeLocal(String(form.get('released') ?? ''), current.released, options.site_timezone)
   let title = String(form.get('title') ?? '').trim()
-  if (!title && current.type === 'memo') title = stripMarkdown(text).slice(0, 40) || '闪念'
+  if (current.type === 'memo') title = formatDate(released, true, options.site_timezone)
   if (!title) title = '未命名'
-  const requestedSlug = String(form.get('slug') ?? '').trim() || title
+  const requestedSlug = current.type === 'memo'
+    ? (current.slug.includes('-draft-') ? `memo-${released}` : current.slug)
+    : String(form.get('slug') ?? '').trim() || title
   const slug = await uniqueContentSlug(c.env.BLOG_DB, current.type, requestedSlug, cid)
   const cover = current.type === 'memo' ? '' : String(form.get('cover') ?? '').trim()
-  const created = parseDatetimeLocal(String(form.get('created') ?? ''), current.created)
   const requestedStatus = String(form.get('status') ?? 'draft') === 'publish' ? 'publish' : 'draft'
   const status: ContentStatus = form.get('hidden') === '1' ? 'hidden' : requestedStatus
-  const categoryIds = [...new Set(form.getAll('categories').map((value) => intValue(value)).filter(Boolean))]
+  const categoryIds = current.type === 'memo' ? [] : [...new Set(form.getAll('categories').map((value) => intValue(value)).filter(Boolean))]
   const tagNames = [...new Set(String(form.get('tags') ?? '').split(/[,，]/).map((name) => name.trim()).filter(Boolean))]
   const tagIds: number[] = []
   for (const name of tagNames) tagIds.push(await findOrCreateTag(c.env.BLOG_DB, name))
   const relationIds = [...new Set([...categoryIds, ...tagIds])]
   const statements = [
-    c.env.BLOG_DB.prepare('UPDATE blog_contents SET title = ?, slug = ?, cover = ?, created = ?, modified = ?, text = ?, status = ? WHERE cid = ?').bind(title, slug, cover, created, nowSeconds(), text, status, cid),
+    c.env.BLOG_DB.prepare('UPDATE blog_contents SET title = ?, slug = ?, cover = ?, modified = ?, released = ?, text = ?, status = ? WHERE cid = ?').bind(title, slug, cover, nowSeconds(), released, text, status, cid),
     c.env.BLOG_DB.prepare('DELETE FROM blog_relationships WHERE cid = ?').bind(cid),
     ...relationIds.map((mid) => c.env.BLOG_DB.prepare('INSERT OR IGNORE INTO blog_relationships(cid, mid) VALUES(?, ?)').bind(cid, mid)),
   ]
@@ -367,9 +388,9 @@ adminRoutes.post('/admin/api/attachments', async (c) => {
   }
   const now = nowSeconds()
   const result = await dbRun(c.env.BLOG_DB, `
-    INSERT INTO blog_contents(title, slug, created, modified, text, type, status)
-    VALUES(?, ?, ?, ?, ?, 'attachment', 'publish')
-  `, value.name, key, now, now, JSON.stringify(info))
+    INSERT INTO blog_contents(title, slug, created, modified, released, text, type, status)
+    VALUES(?, ?, ?, ?, ?, ?, 'attachment', 'publish')
+  `, value.name, key, now, now, now, JSON.stringify(info))
   const cid = Number(result.meta.last_row_id)
   return c.json({ attachment: { cid, ...info }, insertion: insertionForAttachment(info) })
 })
@@ -389,15 +410,96 @@ adminRoutes.post('/admin/api/preview', async (c) => {
   return c.json({ html: renderMarkdown(body.text ?? '') })
 })
 
+adminRoutes.get('/admin/comments', async (c) => {
+  const options = await getOptions(c.env.BLOG_DB)
+  const page = positiveInt(c.req.query('page'), 1, 100000)
+  const perPage = positiveInt(options.comments_per_page, 20, 100)
+  const cid = intValue(c.req.query('cid'))
+  const where = cid ? 'WHERE cm.cid = ?' : ''
+  const args = cid ? [cid] : []
+  const count = await dbFirst<{ total: number }>(c.env.BLOG_DB, `SELECT COUNT(*) AS total FROM blog_comments cm ${where}`, ...args)
+  const total = count?.total ?? 0
+  const rows = await dbAll<AdminCommentRow>(c.env.BLOG_DB, `
+    SELECT cm.*, c.title AS content_title, c.slug AS content_slug, c.type AS content_type
+    FROM blog_comments cm JOIN blog_contents c ON c.cid = cm.cid
+    ${where}
+    ORDER BY cm.created DESC, cm.id DESC LIMIT ? OFFSET ?
+  `, ...args, perPage, (page - 1) * perPage)
+  const path = cid ? `/admin/comments?cid=${cid}` : '/admin/comments'
+  return c.html(
+    <AdminLayout title="评论管理" subtitle={`共 ${total} 条评论`}>
+      <section class="panel"><table class="admin-table comments-admin-table"><thead><tr><th>作者</th><th>评论</th><th>内容</th><th>时间</th></tr></thead><tbody>
+        {rows.length ? rows.map((comment) => <tr>
+          <td><strong>{comment.name}</strong><div class="muted">{comment.email}</div>{comment.site ? <a href={comment.site} target="_blank" rel="noopener noreferrer">{comment.site}</a> : null}<div class="row-actions"><a href={`/admin/comment/${comment.id}`}>编辑</a><form class="inline-form" method="post" action={`/admin/comment/${comment.id}/delete`}><button class="button small danger" type="submit" data-confirm="确定删除这条评论吗？">删除</button></form></div></td>
+          <td class="comment-text-cell">{comment.text}</td>
+          <td><a href={`/admin/content/${comment.cid}`}>{comment.content_title || `CID ${comment.cid}`}</a><div class="row-actions"><a href={`/admin/comments?cid=${comment.cid}`}>只看此内容</a>{comment.content_type !== 'memo' ? <a href={`/post/${encodeURIComponent(comment.content_slug)}/#comments`} target="_blank">查看页面</a> : null}</div></td>
+          <td>{formatDate(comment.created, true, options.site_timezone)}</td>
+        </tr>) : <tr><td colspan={4} class="empty-state">暂无评论</td></tr>}
+      </tbody></table></section>
+      <AdminPagination page={page} totalPages={Math.max(1, Math.ceil(total / perPage))} path={path}/>
+    </AdminLayout>,
+  )
+})
+
+adminRoutes.get('/admin/comment/:id', async (c) => {
+  const id = intValue(c.req.param('id'))
+  const options = await getOptions(c.env.BLOG_DB)
+  const comment = await dbFirst<AdminCommentRow>(c.env.BLOG_DB, `
+    SELECT cm.*, c.title AS content_title, c.slug AS content_slug, c.type AS content_type
+    FROM blog_comments cm JOIN blog_contents c ON c.cid = cm.cid WHERE cm.id = ? LIMIT 1
+  `, id)
+  if (!comment) return c.notFound()
+  return c.html(
+    <AdminLayout title="编辑评论" subtitle={`评论 #${comment.id}`} actions={<a class="button" href="/admin/comments">返回列表</a>}>
+      {c.req.query('saved') ? <div class="notice">评论已保存。</div> : null}
+      <section class="panel"><div class="panel-body"><form method="post" action={`/admin/comment/${comment.id}`} class="main-form comment-edit-form">
+        <div class="settings-inline"><div class="field"><label>名字</label><input class="input" name="name" maxLength={100} value={comment.name} required /></div><div class="field"><label>邮箱</label><input class="input" name="email" type="email" maxLength={200} value={comment.email} required /></div></div>
+        <div class="field"><label>网站</label><input class="input" name="site" maxLength={500} value={comment.site} /></div>
+        <div class="field"><label>评论内容</label><textarea class="textarea comment-edit-text" name="text" maxLength={5000} required>{comment.text}</textarea></div>
+        <div class="comment-context"><strong>评论对象：</strong><a href={`/admin/content/${comment.cid}`}>{comment.content_title || `CID ${comment.cid}`}</a><span> · {formatDate(comment.created, true, options.site_timezone)}</span></div>
+        <div><button class="button primary" type="submit">保存评论</button> <button class="button danger" type="submit" formaction={`/admin/comment/${comment.id}/delete`} formmethod="post" data-confirm="确定删除这条评论吗？">删除</button></div>
+      </form></div></section>
+    </AdminLayout>,
+  )
+})
+
+adminRoutes.post('/admin/comment/:id', async (c) => {
+  const id = intValue(c.req.param('id'))
+  const form = await c.req.formData()
+  const name = String(form.get('name') ?? '').trim().slice(0, 100)
+  const email = String(form.get('email') ?? '').trim().slice(0, 200)
+  const text = String(form.get('text') ?? '').trim().slice(0, 5000)
+  let site = String(form.get('site') ?? '').trim().slice(0, 500)
+  if (!name || !email || !text) return c.text('名字、邮箱和评论内容不能为空', 400)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.text('邮箱格式不正确', 400)
+  if (site) {
+    if (!/^https?:\/\//i.test(site)) site = `https://${site}`
+    try {
+      const parsed = new URL(site)
+      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('invalid protocol')
+      site = parsed.toString()
+    } catch {
+      return c.text('网站地址格式不正确', 400)
+    }
+  }
+  await dbRun(c.env.BLOG_DB, 'UPDATE blog_comments SET name = ?, email = ?, site = ?, text = ? WHERE id = ?', name, email, site, text, id)
+  return c.redirect(`/admin/comment/${id}?saved=1`)
+})
+
+adminRoutes.post('/admin/comment/:id/delete', async (c) => {
+  await dbRun(c.env.BLOG_DB, 'DELETE FROM blog_comments WHERE id = ?', intValue(c.req.param('id')))
+  return c.redirect('/admin/comments')
+})
+
 adminRoutes.get('/admin/links', async (c) => {
   const editId = intValue(c.req.query('edit'))
   const edit = editId ? await dbFirst<BlogLink>(c.env.BLOG_DB, 'SELECT id, name, url, icon, info, "order" AS "order" FROM blog_links WHERE id = ?', editId) : null
   const rows = await dbAll<BlogLink>(c.env.BLOG_DB, 'SELECT id, name, url, icon, info, "order" AS "order" FROM blog_links ORDER BY "order" DESC, id DESC')
   return c.html(
     <AdminLayout title="友链管理" subtitle={`${rows.length} 条友链`}>
-      <div class="two-columns">
-        <section class="panel"><div class="panel-body"><h3>{edit ? '编辑友链' : '新增友链'}</h3><form method="post" action="/admin/links" class="main-form"><input type="hidden" name="id" value={edit?.id ?? ''} /><div class="field"><label>名字</label><input class="input" name="name" value={edit?.name ?? ''} required /></div><div class="field"><label>网址</label><input class="input" name="url" type="url" value={edit?.url ?? ''} required /></div><div class="field"><label>图标链接</label><input class="input" name="icon" data-icon-url value={edit?.icon ?? ''} /><label class="button small" for="icon-upload">上传图标到 R2</label><input id="icon-upload" type="file" accept="image/*" data-icon-upload hidden /></div><div class="field"><label>描述</label><textarea class="textarea" name="info">{edit?.info ?? ''}</textarea></div><div class="field"><label>次序（越大越靠前）</label><input class="input" name="order" type="number" value={edit?.order ?? 0} /></div><button class="button primary" type="submit">保存</button>{edit ? <a class="button" href="/admin/links">取消</a> : null}</form></div></section>
-        <section class="panel"><table class="admin-table"><thead><tr><th>名字</th><th>网址</th><th>次序</th></tr></thead><tbody>{rows.map((link) => <tr><td>{link.name}<div class="row-actions"><a href={`/admin/links?edit=${link.id}`}>编辑</a><form class="inline-form" method="post" action={`/admin/links/${link.id}/delete`}><button class="button small danger" type="submit" data-confirm={`确定删除“${link.name}”吗？`}>删除</button></form></div></td><td><a href={link.url} target="_blank">{link.url}</a></td><td>{link.order}</td></tr>)}</tbody></table></section>
+      <div class="two-columns link-columns">
+        <section class="panel link-list-panel"><table class="admin-table"><thead><tr><th>名字</th><th>网址</th><th>次序</th></tr></thead><tbody>{rows.map((link) => <tr><td>{link.name}<div class="row-actions"><a href={`/admin/links?edit=${link.id}`}>编辑</a><form class="inline-form" method="post" action={`/admin/links/${link.id}/delete`}><button class="button small danger" type="submit" data-confirm={`确定删除“${link.name}”吗？`}>删除</button></form></div></td><td><a href={link.url} target="_blank">{link.url}</a></td><td>{link.order}</td></tr>)}</tbody></table></section>
+        <section class="panel link-form-panel"><div class="panel-body"><h3>{edit ? '编辑友链' : '新增友链'}</h3><form method="post" action="/admin/links" class="main-form"><input type="hidden" name="id" value={edit?.id ?? ''} /><div class="field"><label>名字</label><input class="input" name="name" value={edit?.name ?? ''} required /></div><div class="field"><label>网址</label><input class="input" name="url" type="url" value={edit?.url ?? ''} required /></div><div class="field"><label>图标链接</label><input class="input" name="icon" data-icon-url value={edit?.icon ?? ''} /><label class="button small" for="icon-upload">上传图标到 R2</label><input id="icon-upload" type="file" accept="image/*" data-icon-upload hidden /></div><div class="field"><label>描述</label><textarea class="textarea" name="info">{edit?.info ?? ''}</textarea></div><div class="field"><label>次序（越大越靠前）</label><input class="input" name="order" type="number" value={edit?.order ?? 0} /></div><div><button class="button primary" type="submit">保存</button>{edit ? <a class="button" href="/admin/links">取消</a> : null}</div></form></div></section>
       </div>
     </AdminLayout>,
   )
@@ -425,7 +527,7 @@ adminRoutes.post('/admin/links/:id/delete', async (c) => {
 adminRoutes.get('/admin/options', async (c) => {
   const options = await getOptions(c.env.BLOG_DB)
   return c.html(
-    <AdminLayout title="系统设置" subtitle="站点信息、浏览器图标与分页配置">
+    <AdminLayout title="系统设置" subtitle="站点信息、评论、时区与分页配置">
       {c.req.query('saved') ? <div class="notice">设置已保存。</div> : null}
       <section class="panel"><div class="panel-body"><form method="post" action="/admin/options" class="main-form">
         <div class="field"><label>站点标题</label><input class="input" name="site_title" value={options.site_title} /></div>
@@ -446,15 +548,19 @@ adminRoutes.get('/admin/options', async (c) => {
           </div>
         </div>
         <div class="field"><label>站点描述</label><input class="input" name="site_description" value={options.site_description} /></div>
-        <div class="field"><label>首页每页文章数</label><input class="input" name="posts_per_page" type="number" min="1" max="100" value={options.posts_per_page} /></div>
-        <div class="field"><label>闪念每页数量</label><input class="input" name="memos_per_page" type="number" min="1" max="100" value={options.memos_per_page} /></div>
+        <div class="settings-inline settings-three-columns">
+          <div class="field"><label>首页每页文章数</label><input class="input" name="posts_per_page" type="number" min="1" max="100" value={options.posts_per_page} /></div>
+          <div class="field"><label>闪念每页数量</label><input class="input" name="memos_per_page" type="number" min="1" max="100" value={options.memos_per_page} /></div>
+          <div class="field"><label>评论分页数</label><input class="input" name="comments_per_page" type="number" min="1" max="100" value={options.comments_per_page} /></div>
+        </div>
+        <div class="field option-check"><label><input type="checkbox" name="comments_enabled" value="true" checked={options.comments_enabled === 'true'} /> 开启评论功能</label><small class="muted">开启后，文章和页面详情会显示评论输入框与评论列表。</small></div>
         <div class="field"><label>关于页面别名</label><input class="input" name="about_slug" value={options.about_slug} /></div>
         <div class="field"><label>头像 URL</label><input class="input" name="about_avatar" value={options.about_avatar} placeholder="https://example.com/avatar.png" /></div>
         <div class="field"><label>GitHub</label><input class="input" name="about_github" value={options.about_github} placeholder="https://github.com/username" /></div>
         <div class="field"><label>X</label><input class="input" name="about_x" value={options.about_x} placeholder="https://x.com/username" /></div>
         <div class="field"><label>RSS</label><input class="input" name="about_rss" value={options.about_rss} placeholder="/atom.xml 或完整 URL" /></div>
         <div class="field"><label>邮箱</label><input class="input" name="about_email" value={options.about_email} placeholder="name@example.com" /></div>
-        <div class="field"><label>时区</label><input class="input" name="site_timezone" value={options.site_timezone} placeholder="Asia/Shanghai" /></div>
+        <div class="field"><label for="site_timezone">时区</label><select class="select" id="site_timezone" name="site_timezone">{TIMEZONE_OPTIONS.map(([value, label]) => <option value={value} selected={options.site_timezone === value}>{label}</option>)}</select><small class="muted">默认使用 UTC+08:00 东八区（北京 / 上海）。</small></div>
         <div class="field"><label>页脚文字</label><input class="input" name="footer_text" value={options.footer_text} /></div>
         <button class="button primary" type="submit">保存设置</button>
       </form></div></section>
@@ -464,14 +570,16 @@ adminRoutes.get('/admin/options', async (c) => {
 
 adminRoutes.post('/admin/options', async (c) => {
   const form = await c.req.formData()
-  const keys = ['site_title', 'site_description', 'posts_per_page', 'memos_per_page', 'about_slug', 'about_avatar', 'about_github', 'about_x', 'about_rss', 'about_email', 'site_timezone', 'footer_text', 'favicon_text', 'favicon_color']
+  const keys = ['site_title', 'site_description', 'posts_per_page', 'memos_per_page', 'comments_per_page', 'about_slug', 'about_avatar', 'about_github', 'about_x', 'about_rss', 'about_email', 'site_timezone', 'footer_text', 'favicon_text', 'favicon_color']
   const values: OptionMap = Object.fromEntries(keys.map((key) => [key, String(form.get(key) ?? '')]))
+  values.comments_enabled = form.get('comments_enabled') === 'true' ? 'true' : 'false'
   values.posts_per_page = String(positiveInt(values.posts_per_page, 10, 100))
   values.memos_per_page = String(positiveInt(values.memos_per_page, 20, 100))
+  values.comments_per_page = String(positiveInt(values.comments_per_page, 20, 100))
   values.about_slug = slugify(values.about_slug || 'about')
   values.favicon_text = normalizeFaviconText(values.favicon_text, Array.from(values.site_title.trim())[0] || 'B')
   values.favicon_color = normalizeFaviconColor(values.favicon_color)
-  try { new Intl.DateTimeFormat('zh-CN', { timeZone: values.site_timezone }).format() } catch { values.site_timezone = 'Asia/Shanghai' }
+  if (!TIMEZONE_VALUES.has(values.site_timezone)) values.site_timezone = 'Asia/Shanghai'
   await saveOptions(c.env.BLOG_DB, values)
   return c.redirect('/admin/options?saved=1')
 })

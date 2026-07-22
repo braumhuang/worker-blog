@@ -5,6 +5,7 @@ const adminNav = [
   ['/admin/contents?type=post', '文章'],
   ['/admin/contents?type=page', '页面'],
   ['/admin/contents?type=memo', '闪念'],
+  ['/admin/comments', '评论'],
   ['/admin/metas?type=category', '分类'],
   ['/admin/metas?type=tag', '标签'],
   ['/admin/attachments', '附件'],
