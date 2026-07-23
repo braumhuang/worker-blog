@@ -14,12 +14,12 @@
     "db:seed:remote": "wrangler d1 execute BLOG_DB --remote --file=./seed.sql"
   },
   "dependencies": {
-    "hono": "^4.12.30",
-    "marked": "^18.0.6"
+    "hono": "^4.12.0",
+    "marked": "^18.0.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260717.1",
-    "typescript": "^5.9.2",
+    "@cloudflare/workers-types": "^5.20260000.0",
+    "typescript": "^6.0.0",
     "wrangler": "4.110.0"
   }
 }

@@ -387,10 +387,10 @@ input[type="radio"] {
   padding: 13px 14px 14px;
 }
 .side-box-body > .field + .field {
-  margin-top: 11px;
+  margin-top: 10px;
 }
 .side-box-body > .button.primary {
-  margin-top: 1px;
+  margin-top: 10px;
 }
 .cover-url-field {
   margin-bottom: 1px;
@@ -645,7 +645,7 @@ input[type="radio"] {
 /* tables and indexes */
 .admin-table {
   width: 100%;
-  table-layout: fixed;
+  /* table-layout: fixed; */
   border-collapse: separate;
   border-spacing: 0;
   background: #fff;
@@ -919,10 +919,9 @@ tr:hover .row-actions {
 .navigation-row {
   position: relative;
   display: grid;
-  grid-template-columns: 86px minmax(150px, 0.8fr) minmax(
-      240px,
-      1.35fr
-    ) 88px 72px;
+  grid-template-columns:
+    86px minmax(150px, 0.8fr) minmax(240px, 1.35fr)
+    88px 72px;
   gap: 12px;
   align-items: end;
   padding: 12px;
@@ -935,10 +934,9 @@ tr:hover .row-actions {
 }
 
 .navigation-row-custom {
-  grid-template-columns: 86px minmax(140px, 0.7fr) minmax(
-      220px,
-      1.15fr
-    ) 110px 82px 72px;
+  grid-template-columns:
+    86px minmax(140px, 0.7fr) minmax(220px, 1.15fr)
+    110px 82px 72px;
 }
 .navigation-order-field,
 .navigation-template-field {
@@ -1069,17 +1067,15 @@ tr:hover .row-actions {
     width: auto;
   }
   .navigation-row {
-    grid-template-columns: 76px minmax(130px, 0.8fr) minmax(
-        220px,
-        1.2fr
-      ) 72px 66px;
+    grid-template-columns:
+      76px minmax(130px, 0.8fr) minmax(220px, 1.2fr)
+      72px 66px;
     gap: 8px;
   }
   .navigation-row-custom {
-    grid-template-columns: 76px minmax(130px, 0.75fr) minmax(
-        200px,
-        1.1fr
-      ) 96px 76px 66px;
+    grid-template-columns:
+      76px minmax(130px, 0.75fr) minmax(200px, 1.1fr)
+      96px 76px 66px;
   }
   .editor-workspace.preview-visible {
     grid-template-columns: 1fr;

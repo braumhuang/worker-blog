@@ -152,14 +152,14 @@ worker-blog/
 
 自带菜单包括：
 
-| ID | 默认名称 | URL | 默认显示 |
-| --- | --- | --- | --- |
-| `home` | 首页 | `/` | 是，不能隐藏 |
-| `memos` | 闪念 | `/memos` | 是 |
-| `archives` | 归档 | `/archives` | 是 |
-| `categories` | 分类 | `/categories` | 否 |
-| `tags` | 标签 | `/tags` | 是 |
-| `links` | 友链 | `/links` | 是 |
+| ID           | 默认名称 | URL           | 默认显示     |
+| ------------ | -------- | ------------- | ------------ |
+| `home`       | 首页     | `/`           | 是，不能隐藏 |
+| `memos`      | 闪念     | `/memos`      | 是           |
+| `archives`   | 归档     | `/archives`   | 是           |
+| `categories` | 分类     | `/categories` | 否           |
+| `tags`       | 标签     | `/tags`       | 是           |
+| `links`      | 友链     | `/links`      | 是           |
 
 自带菜单不能删除或修改 URL，但可以修改菜单名、显示状态和整数次序。后台该列显示“自带”。组内按次序升序排列，次序相同时按菜单名排列。
 
@@ -259,20 +259,20 @@ worker-blog/
 
 使用 `key` 和 `value` 保存站点设置。
 
-| key | 默认值 | 用途 |
-| --- | --- | --- |
-| `file_cdn_url` | 空 | 文件 CDN 域名 |
-| `posts_per_page` | `10` | 前台文章分页数 |
-| `memos_per_page` | `20` | 前台闪念分页数 |
-| `archives_per_page` | `50` | 前台归档分页数 |
-| `comments_per_page` | `20` | 前台评论分页数 |
-| `admin_contents_per_page` | `25` | 后台文章分页数 |
-| `admin_memos_per_page` | `25` | 后台闪念分页数 |
-| `admin_comments_per_page` | `20` | 后台评论分页数 |
-| `admin_attachments_per_page` | `30` | 后台附件分页数 |
-| `navigation_menu` | JSON | 自带菜单与新增菜单配置 |
-| `attachment_templates` | JSON | 图片、视频、文件的附件插入模板 |
-| `footer_info` | Kehua 链接 HTML | 页脚信息，留空时只显示版权 |
+| key                          | 默认值          | 用途                           |
+| ---------------------------- | --------------- | ------------------------------ |
+| `file_cdn_url`               | 空              | 文件 CDN 域名                  |
+| `posts_per_page`             | `10`            | 前台文章分页数                 |
+| `memos_per_page`             | `20`            | 前台闪念分页数                 |
+| `archives_per_page`          | `50`            | 前台归档分页数                 |
+| `comments_per_page`          | `20`            | 前台评论分页数                 |
+| `admin_contents_per_page`    | `25`            | 后台文章分页数                 |
+| `admin_memos_per_page`       | `25`            | 后台闪念分页数                 |
+| `admin_comments_per_page`    | `20`            | 后台评论分页数                 |
+| `admin_attachments_per_page` | `30`            | 后台附件分页数                 |
+| `navigation_menu`            | JSON            | 自带菜单与新增菜单配置         |
+| `attachment_templates`       | JSON            | 图片、视频、文件的附件插入模板 |
+| `footer_info`                | Kehua 链接 HTML | 页脚信息，留空时只显示版权     |
 
 后台设置将四项前台分页配置放在一行，将四项后台分页配置放在下一行。FAVICON 文本预览位于文本输入框右侧，预览和颜色选择器均使用正方形控件。页脚版权年份运行时计算，站点名称读取 `site_title`；`footer_info` 非空时以 `· Theme by` 拼接其 HTML。
 
@@ -323,42 +323,42 @@ YYYY/MM/UUID.扩展名
 
 ### 9.1 公开路由
 
-| 路由 | 用途 |
-| --- | --- |
-| `/` | 首页 |
-| `/post/:slug/` | 普通文章或自定义模板页面 |
-| `/post/:slug/comments` | 提交评论 |
-| `/memos/` | 闪念 |
-| `/archives/` | 归档分页 |
-| `/categories/` | 分类总览 |
-| `/tags/` | 标签总览 |
-| `/tag/:slug/` | 标签文章列表 |
-| `/category/:slug/` | 分类文章列表 |
-| `/links/` | 友链 |
-| `/api/search` | 搜索接口 |
-| `/favicon.svg` | 动态 SVG Favicon |
-| `/atom.xml` | 最近 20 篇文章的 Atom 订阅 |
-| `/uploads/*` | Worker 代理读取 R2 |
+| 路由                   | 用途                       |
+| ---------------------- | -------------------------- |
+| `/`                    | 首页                       |
+| `/post/:slug/`         | 普通文章或自定义模板页面   |
+| `/post/:slug/comments` | 提交评论                   |
+| `/memos/`              | 闪念                       |
+| `/archives/`           | 归档分页                   |
+| `/categories/`         | 分类总览                   |
+| `/tags/`               | 标签总览                   |
+| `/tag/:slug/`          | 标签文章列表               |
+| `/category/:slug/`     | 分类文章列表               |
+| `/links/`              | 友链                       |
+| `/api/search`          | 搜索接口                   |
+| `/favicon.svg`         | 动态 SVG Favicon           |
+| `/atom.xml`            | 最近 20 篇文章的 Atom 订阅 |
+| `/uploads/*`           | Worker 代理读取 R2         |
 
 ### 9.2 后台路由
 
-| 路由 | 用途 |
-| --- | --- |
-| `/admin/login` | 管理员登录 |
-| `/admin` | 后台面板 |
-| `/admin/navigation` | 自带菜单和新增菜单管理 |
-| `/admin/contents?type=post` | 文章与页面列表 |
-| `/admin/contents?type=memo` | 闪念列表 |
-| `/admin/content/new` | 新建内容 |
-| `/admin/content/:cid` | 编辑内容 |
-| `/admin/comments` | 评论管理 |
-| `/admin/metas` | 分类或标签管理 |
-| `/admin/attachments` | 附件管理 |
-| `/admin/attachment-templates` | 附件模板管理 |
-| `/admin/links` | 友链管理 |
-| `/admin/options` | 网站设置与数据管理 |
-| `/admin/data/export` | 导出 JSON |
-| `/admin/data/import` | 导入 JSON |
+| 路由                          | 用途                   |
+| ----------------------------- | ---------------------- |
+| `/admin/login`                | 管理员登录             |
+| `/admin`                      | 后台面板               |
+| `/admin/navigation`           | 自带菜单和新增菜单管理 |
+| `/admin/contents?type=post`   | 文章与页面列表         |
+| `/admin/contents?type=memo`   | 闪念列表               |
+| `/admin/content/new`          | 新建内容               |
+| `/admin/content/:cid`         | 编辑内容               |
+| `/admin/comments`             | 评论管理               |
+| `/admin/metas`                | 分类或标签管理         |
+| `/admin/attachments`          | 附件管理               |
+| `/admin/attachment-templates` | 附件模板管理           |
+| `/admin/links`                | 友链管理               |
+| `/admin/options`              | 网站设置与数据管理     |
+| `/admin/data/export`          | 导出 JSON              |
+| `/admin/data/import`          | 导入 JSON              |
 
 ## 10. 数据导出与导入
 

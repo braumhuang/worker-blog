@@ -73,7 +73,6 @@ npm run deploy
 
 前台和后台 CSS、JavaScript 都使用实际静态文件：`static/public.css`、`static/public.js`、`static/admin.css` 和 `static/admin.js`。后台页面 JSX 按页面拆分在 `src/views/admin/`，路由文件只负责数据读取、校验和写入。
 
-
 ## 后台 JSX 与附件模板
 
 后台页面按职责拆分在 `src/views/admin/`，包括登录、面板、导航、内容列表、内容编辑、分类标签、附件、附件模板、评论、友链和系统设置。

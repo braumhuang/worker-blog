@@ -1,10 +1,10 @@
-import { marked } from 'marked'
+import { marked } from "marked";
 
 marked.setOptions({
   gfm: true,
   breaks: false,
-})
+});
 
 export function renderMarkdown(source: string): string {
-  return marked.parse(source) as string
+  return marked.parse(source) as string;
 }
