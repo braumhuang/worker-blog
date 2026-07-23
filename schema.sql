@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS blog_contents (
   released INTEGER NOT NULL,
   text TEXT NOT NULL DEFAULT '',
   cover TEXT NOT NULL DEFAULT '',
-  type TEXT NOT NULL CHECK (type IN ('post', 'atta', 'memo')),
+  type TEXT NOT NULL CHECK (type IN ('post', 'page', 'atta', 'memo')),
   status TEXT NOT NULL CHECK (status IN ('publish', 'draft', 'hidden')) DEFAULT 'draft'
 );
 
@@ -18,7 +18,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_contents_type_slug
   ON blog_contents(type, slug);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_public_content_slug
   ON blog_contents(slug)
-  WHERE type = 'post';
+  WHERE type IN ('post', 'page');
 CREATE INDEX IF NOT EXISTS idx_contents_type_status_released
   ON blog_contents(type, status, released DESC);
 CREATE INDEX IF NOT EXISTS idx_contents_modified

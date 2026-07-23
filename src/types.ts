@@ -1,6 +1,7 @@
-export type ContentType = 'post' | 'atta' | 'memo'
+export type ContentType = 'post' | 'page' | 'atta' | 'memo'
 export type ContentStatus = 'publish' | 'draft' | 'hidden'
 export type MetaType = 'tag' | 'category'
+export type AttachmentTemplateType = 'image' | 'video' | 'file'
 
 export type Bindings = {
   BLOG_DB: D1Database
@@ -72,6 +73,13 @@ export interface NavigationItem {
   section: NavigationSection
   template?: NavigationTemplate
   order: number
+}
+
+export interface AttachmentTemplate {
+  id: string
+  name: string
+  type: AttachmentTemplateType
+  template: string
 }
 
 export interface AttachmentInfo {

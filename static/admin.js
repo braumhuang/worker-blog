@@ -1,4 +1,3 @@
-export const adminJs = String.raw`
 (() => {
   const $ = (selector, root = document) => root.querySelector(selector);
   const editor = $('[data-editor]');
@@ -12,6 +11,15 @@ export const adminJs = String.raw`
     const end = editor.selectionEnd;
     const selected = editor.value.slice(start, end) || placeholder;
     editor.setRangeText(before + selected + after, start, end, 'end');
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    editor.focus();
+  }
+
+  function insertRawText(text) {
+    if (!editor) return;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    editor.setRangeText(text, start, end, 'end');
     editor.dispatchEvent(new Event('input', { bubbles: true }));
     editor.focus();
   }
@@ -35,6 +43,7 @@ export const adminJs = String.raw`
   }
 
   function showCopied(button) {
+    if (!button) return;
     const original = button.textContent;
     button.textContent = '已复制';
     window.setTimeout(() => { button.textContent = original; }, 1200);
@@ -47,12 +56,95 @@ export const adminJs = String.raw`
     quote: () => insertText('> ', '', '引用'),
     ul: () => insertText('- ', '', '列表项'),
     ol: () => insertText('1. ', '', '列表项'),
-    code: () => insertText('\n${'```'}\n', '\n${'```'}\n', '代码'),
+    code: () => insertText('\n```\n', '\n```\n', '代码'),
     link: () => insertText('[', '](https://)', '链接文字'),
+    a: () => insertText('<a href="https://" target="_blank">', '</a>', '链接名称'),
     image: () => insertText('![', '](https://)', '图片描述'),
     more: () => insertText('\n<!-- more -->\n'),
     hr: () => insertText('\n---\n'),
   };
+
+  const fallbackTemplates = {
+    image: '![FILE_NAME](RELATIVE_PATH)',
+    video: '<video controls preload="metadata" src="RELATIVE_PATH">FILE_NAME</video>',
+    file: '[FILE_NAME](RELATIVE_PATH)',
+  };
+  const templateCache = new WeakMap();
+
+  function templatesFor(root, kind) {
+    if (!root) return [];
+    let templates = templateCache.get(root);
+    if (!templates) {
+      try {
+        const parsed = JSON.parse(root.dataset.attachmentTemplates || '[]');
+        templates = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        templates = [];
+      }
+      templateCache.set(root, templates);
+    }
+    return templates.filter((item) => item && item.type === kind && typeof item.template === 'string');
+  }
+
+  function applyTemplate(template, path, fileName) {
+    return String(template).replaceAll('RELATIVE_PATH', path).replaceAll('FILE_NAME', fileName);
+  }
+
+  function chooseTemplate(templates, fileName) {
+    return new Promise((resolve) => {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'attachment-template-backdrop';
+      const dialog = document.createElement('section');
+      dialog.className = 'attachment-template-dialog';
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.innerHTML = '<div class="attachment-template-dialog-head"><div><strong>选择附件模板</strong><small></small></div><button type="button" class="attachment-template-close" aria-label="关闭">×</button></div><div class="attachment-template-options"></div>';
+      dialog.querySelector('small').textContent = fileName;
+      const options = dialog.querySelector('.attachment-template-options');
+      templates.forEach((item) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'attachment-template-option';
+        const name = document.createElement('strong');
+        name.textContent = item.name;
+        const code = document.createElement('code');
+        code.textContent = item.template;
+        button.append(name, code);
+        button.addEventListener('click', () => finish(item.template));
+        options.append(button);
+      });
+      backdrop.append(dialog);
+      document.body.append(backdrop);
+      const finish = (value) => {
+        document.removeEventListener('keydown', onKeydown);
+        backdrop.remove();
+        resolve(value);
+      };
+      const onKeydown = (event) => { if (event.key === 'Escape') finish(null); };
+      document.addEventListener('keydown', onKeydown);
+      dialog.querySelector('.attachment-template-close').addEventListener('click', () => finish(null));
+      backdrop.addEventListener('click', (event) => { if (event.target === backdrop) finish(null); });
+      options.querySelector('button')?.focus();
+    });
+  }
+
+  async function insertAttachment(trigger) {
+    const path = trigger.dataset.attachmentPath || '';
+    const fileName = trigger.dataset.attachmentName || '';
+    const kind = trigger.dataset.attachmentKind || 'file';
+    const root = trigger.closest('[data-attachment-list]');
+    const configured = templatesFor(root, kind);
+    const selectedTemplate = configured.length ? await chooseTemplate(configured, fileName) : fallbackTemplates[kind] || fallbackTemplates.file;
+    if (!selectedTemplate) return;
+    const insertion = applyTemplate(selectedTemplate, path, fileName);
+    try {
+      await copyText(insertion);
+      if (editor) insertRawText(insertion);
+      showCopied(trigger);
+    } catch {
+      alert('复制到剪贴板失败');
+    }
+  }
 
   document.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-md-action]');
@@ -73,14 +165,7 @@ export const adminJs = String.raw`
     const insert = event.target.closest('[data-attachment-insert]');
     if (insert) {
       event.preventDefault();
-      const insertion = insert.dataset.attachmentInsert || '';
-      try {
-        await copyText(insertion);
-        if (editor) insertText(insertion);
-        showCopied(insert);
-      } catch {
-        alert('复制到剪贴板失败');
-      }
+      await insertAttachment(insert);
     }
     const remove = event.target.closest('[data-attachment-delete]');
     if (remove) {
@@ -97,9 +182,7 @@ export const adminJs = String.raw`
     const workspace = editorPanel?.querySelector('.editor-workspace');
     if (!workspace?.classList.contains('preview-visible')) return;
     const response = await fetch('/admin/api/preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: editor.value }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: editor.value }),
     });
     const data = await response.json();
     preview.innerHTML = data.html || '';
@@ -113,10 +196,16 @@ export const adminJs = String.raw`
   const uploadStatus = $('[data-upload-status]');
   const attachmentList = $('[data-attachment-list]');
 
+  function fileKind(mime) {
+    if (mime?.startsWith('image/')) return 'image';
+    if (mime?.startsWith('video/')) return 'video';
+    return 'file';
+  }
+
   function createAttachmentItem(data) {
     const item = document.createElement('div');
     item.className = 'attachment-item';
-    item.innerHTML = '<div class="attachment-thumb"></div><div><div class="attachment-name"></div><small class="muted"></small></div><div><button type="button" class="button small insert-button">插入</button> <button type="button" class="button small danger delete-button">删除</button></div>';
+    item.innerHTML = '<div class="attachment-thumb"></div><div><div class="attachment-name"></div><small class="muted"></small></div><div><button type="button" class="button small insert-button" data-attachment-insert>插入</button> <button type="button" class="button small danger delete-button">删除</button></div>';
     item.querySelector('.attachment-name').textContent = data.attachment.originalName;
     item.querySelector('small').textContent = Math.ceil(data.attachment.size / 1024) + ' KB';
     const thumb = item.querySelector('.attachment-thumb');
@@ -125,12 +214,11 @@ export const adminJs = String.raw`
       image.src = data.attachment.url;
       image.alt = '';
       thumb.append(image);
-    } else {
-      thumb.textContent = data.attachment.mime.startsWith('video/') ? 'VIDEO' : 'FILE';
-    }
+    } else thumb.textContent = data.attachment.mime.startsWith('video/') ? 'VIDEO' : 'FILE';
     const insertButton = item.querySelector('.insert-button');
-    insertButton.dataset.attachmentInsert = data.insertion;
-    insertButton.setAttribute('data-attachment-insert', '');
+    insertButton.dataset.attachmentPath = data.attachment.path || data.attachment.url;
+    insertButton.dataset.attachmentName = data.attachment.originalName;
+    insertButton.dataset.attachmentKind = fileKind(data.attachment.mime);
     const deleteButton = item.querySelector('.delete-button');
     deleteButton.dataset.attachmentDelete = String(data.attachment.cid);
     deleteButton.setAttribute('data-attachment-delete', '');
@@ -138,8 +226,10 @@ export const adminJs = String.raw`
   }
 
   function refreshAttachmentList(data) {
-    if (!attachmentList) return;
-    attachmentList.prepend(createAttachmentItem(data));
+    if (!attachmentList) return null;
+    const item = createAttachmentItem(data);
+    attachmentList.prepend(item);
+    return item;
   }
 
   fileInput?.addEventListener('change', async () => {
@@ -147,18 +237,17 @@ export const adminJs = String.raw`
     if (!files.length) return;
     const cid = fileInput.dataset.cid;
     for (const file of files) {
-      uploadStatus.style.display = 'block';
-      uploadStatus.textContent = '正在上传 ' + file.name + '…';
+      if (uploadStatus) { uploadStatus.style.display = 'block'; uploadStatus.textContent = '正在上传 ' + file.name + '…'; }
       const body = new FormData();
       body.append('file', file);
       body.append('cid', cid || '');
       const response = await fetch('/admin/api/attachments', { method: 'POST', body });
       const data = await response.json();
       if (!response.ok) { alert(data.error || '上传失败'); continue; }
-      if (editor) insertText(data.insertion + '\n');
-      refreshAttachmentList(data);
+      const item = refreshAttachmentList(data);
+      if (editor && item) await insertAttachment(item.querySelector('[data-attachment-insert]'));
     }
-    uploadStatus.textContent = '上传完成';
+    if (uploadStatus) uploadStatus.textContent = '上传完成';
     fileInput.value = '';
   });
 
@@ -176,37 +265,27 @@ export const adminJs = String.raw`
       const response = await fetch('/admin/api/attachments', { method: 'POST', body });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '上传失败');
-      if (coverUrl) {
-        coverUrl.value = data.attachment.path || data.attachment.url;
-        coverUrl.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+      if (coverUrl) { coverUrl.value = data.attachment.path || data.attachment.url; coverUrl.dispatchEvent(new Event('input', { bubbles: true })); }
       refreshAttachmentList(data);
       if (coverStatus) coverStatus.textContent = '封面上传完成，附件列表已刷新，保存内容后生效。';
     } catch (error) {
       if (coverStatus) coverStatus.textContent = error instanceof Error ? error.message : '上传失败';
-    } finally {
-      coverUpload.value = '';
-    }
+    } finally { coverUpload.value = ''; }
   });
 
   const tagsRoot = $('[data-tags]');
   if (tagsRoot) {
     const hidden = $('[data-tags-hidden]', tagsRoot);
     const input = $('input[type="text"]', tagsRoot);
-    const sync = () => {
-      hidden.value = Array.from(tagsRoot.querySelectorAll('.tag-chip span')).map((node) => node.textContent.trim()).join(',');
-    };
+    const sync = () => { hidden.value = Array.from(tagsRoot.querySelectorAll('.tag-chip span')).map((node) => node.textContent.trim()).join(','); };
     const add = (name) => {
       name = name.trim();
       if (!name || Array.from(tagsRoot.querySelectorAll('.tag-chip span')).some((node) => node.textContent === name)) return;
-      const chip = document.createElement('span');
-      chip.className = 'tag-chip';
+      const chip = document.createElement('span'); chip.className = 'tag-chip';
       const label = document.createElement('span'); label.textContent = name;
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×';
       remove.addEventListener('click', () => { chip.remove(); sync(); });
-      chip.append(label, remove);
-      tagsRoot.insertBefore(chip, input);
-      sync();
+      chip.append(label, remove); tagsRoot.insertBefore(chip, input); sync();
     };
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); add(input.value.replace(/,$/, '')); input.value = ''; }
@@ -217,45 +296,27 @@ export const adminJs = String.raw`
     sync();
   }
 
-  const iconUpload = $('[data-icon-upload]');
-  const iconUrl = $('[data-icon-url]');
-  iconUpload?.addEventListener('change', async () => {
-    const file = iconUpload.files?.[0];
+  async function uploadSingle(input, urlInput, status, successText) {
+    const file = input.files?.[0];
     if (!file) return;
-    const body = new FormData();
-    body.append('file', file);
-    const response = await fetch('/admin/api/attachments', { method: 'POST', body });
-    const data = await response.json();
-    if (!response.ok) { alert(data.error || '上传失败'); return; }
-    if (iconUrl) iconUrl.value = data.attachment.path || data.attachment.url;
-    iconUpload.value = '';
-  });
-
-
-  const avatarUpload = $('[data-avatar-upload]');
-  const avatarUrl = $('[data-avatar-url]');
-  const avatarStatus = $('[data-avatar-status]');
-  avatarUpload?.addEventListener('change', async () => {
-    const file = avatarUpload.files?.[0];
-    if (!file) return;
-    if (avatarStatus) avatarStatus.textContent = '正在上传 ' + file.name + '…';
-    const body = new FormData();
-    body.append('file', file);
+    if (status) status.textContent = '正在上传 ' + file.name + '…';
+    const body = new FormData(); body.append('file', file);
     try {
       const response = await fetch('/admin/api/attachments', { method: 'POST', body });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '上传失败');
-      if (avatarUrl) {
-        avatarUrl.value = data.attachment.path || data.attachment.url;
-        avatarUrl.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      if (avatarStatus) avatarStatus.textContent = '头像上传完成，保存设置后生效。';
+      if (urlInput) { urlInput.value = data.attachment.path || data.attachment.url; urlInput.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (status) status.textContent = successText;
     } catch (error) {
-      if (avatarStatus) avatarStatus.textContent = error instanceof Error ? error.message : '上传失败';
-    } finally {
-      avatarUpload.value = '';
-    }
-  });
+      if (status) status.textContent = error instanceof Error ? error.message : '上传失败';
+      else alert(error instanceof Error ? error.message : '上传失败');
+    } finally { input.value = ''; }
+  }
+
+  const iconUpload = $('[data-icon-upload]');
+  iconUpload?.addEventListener('change', () => uploadSingle(iconUpload, $('[data-icon-url]'), null, ''));
+  const avatarUpload = $('[data-avatar-upload]');
+  avatarUpload?.addEventListener('change', () => uploadSingle(avatarUpload, $('[data-avatar-url]'), $('[data-avatar-status]'), '头像上传完成，保存设置后生效。'));
 
   const faviconText = $('[data-favicon-text]');
   const faviconColorText = $('[data-favicon-color-text]');
@@ -265,34 +326,21 @@ export const adminJs = String.raw`
   const updateFaviconPreview = () => {
     if (!faviconPreview) return;
     faviconPreview.textContent = Array.from(faviconText?.value.trim() || 'B').slice(0, 2).join('');
-    if (faviconColorText && validFaviconColor(faviconColorText.value.trim())) {
-      faviconPreview.style.setProperty('--favicon-color', faviconColorText.value.trim());
-    }
+    if (faviconColorText && validFaviconColor(faviconColorText.value.trim())) faviconPreview.style.setProperty('--favicon-color', faviconColorText.value.trim());
   };
   faviconText?.addEventListener('input', updateFaviconPreview);
-  faviconColorPicker?.addEventListener('input', () => {
-    if (faviconColorText) faviconColorText.value = faviconColorPicker.value.toUpperCase();
-    updateFaviconPreview();
-  });
-  faviconColorText?.addEventListener('input', () => {
-    const value = faviconColorText.value.trim();
-    if (faviconColorPicker && validFaviconColor(value)) faviconColorPicker.value = value;
-    updateFaviconPreview();
-  });
+  faviconColorPicker?.addEventListener('input', () => { if (faviconColorText) faviconColorText.value = faviconColorPicker.value.toUpperCase(); updateFaviconPreview(); });
+  faviconColorText?.addEventListener('input', () => { const value = faviconColorText.value.trim(); if (faviconColorPicker && validFaviconColor(value)) faviconColorPicker.value = value; updateFaviconPreview(); });
   updateFaviconPreview();
 
   const customNavigationList = document.querySelector('[data-navigation-list][data-navigation-section="custom"]');
   const navigationAdd = $('[data-navigation-add]');
   const navigationForm = $('[data-navigation-form]');
-
   const nextCustomNavigationOrder = () => {
     if (!customNavigationList) return 10;
-    const values = Array.from(customNavigationList.querySelectorAll('input[name^="nav_order:"]'))
-      .map((input) => Number.parseInt(input.value, 10))
-      .filter(Number.isFinite);
+    const values = Array.from(customNavigationList.querySelectorAll('input[name^="nav_order:"]')).map((input) => Number.parseInt(input.value, 10)).filter(Number.isFinite);
     return values.length ? Math.max(...values) + 10 : 10;
   };
-
   const createNavigationRow = () => {
     if (!customNavigationList) return;
     const id = 'custom-' + crypto.randomUUID();
@@ -312,22 +360,16 @@ export const adminJs = String.raw`
     customNavigationList.append(row);
     row.querySelector('.navigation-name-field input')?.focus();
   };
-
   navigationAdd?.addEventListener('click', createNavigationRow);
   customNavigationList?.addEventListener('click', (event) => {
     const remove = event.target.closest('[data-navigation-delete]');
-    if (!remove) return;
-    remove.closest('[data-navigation-row]')?.remove();
+    if (remove) remove.closest('[data-navigation-row]')?.remove();
   });
-
   navigationForm?.addEventListener('submit', () => {
-    navigationForm.querySelectorAll('input:disabled').forEach((input) => {
-      if (input.name?.startsWith('nav_visible:')) input.disabled = false;
-    });
+    navigationForm.querySelectorAll('input:disabled').forEach((input) => { if (input.name?.startsWith('nav_visible:')) input.disabled = false; });
   });
 
   document.querySelectorAll('[data-confirm]').forEach((element) => element.addEventListener('click', (event) => {
     if (!confirm(element.dataset.confirm || '确定执行吗？')) event.preventDefault();
   }));
 })();
-`

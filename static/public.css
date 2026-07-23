@@ -2153,3 +2153,5 @@ body.mobile-nav-open {
   .about-header { margin-bottom: var(--spacing-xl); }
 }
 
+
+.link-card-body-name-only { justify-content: center; }

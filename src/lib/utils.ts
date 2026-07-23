@@ -182,6 +182,6 @@ export function fileKind(mime: string): 'image' | 'video' | 'file' {
 export function insertionForAttachment(info: AttachmentInfo): string {
   const safeName = info.originalName.replaceAll('\\', '\\\\').replaceAll(']', '\\]').replace(/[\r\n]+/g, ' ')
   if (fileKind(info.mime) === 'image') return `![${safeName}](${info.url})`
-  if (fileKind(info.mime) === 'video') return `<video controls preload="metadata" src="${info.url}"></video>`
-  return `[下载 ${safeName}](${info.url})`
+  if (fileKind(info.mime) === 'video') return `<video controls preload="metadata" src="${info.url}">${safeName}</video>`
+  return `[${safeName}](${info.url})`
 }

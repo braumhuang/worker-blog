@@ -23,6 +23,7 @@
 - 评论表单、评论列表和局部翻页
 - 闪念时间轴、年度热力图和标签
 - 归档分页、标签、分类总览和友链
+- 友链没有描述时只显示名称，不使用网址补充描述
 - 标题、正文和标签搜索
 - 深浅模式与响应式导航
 - 动态 SVG Favicon
@@ -37,11 +38,12 @@
 - 管理员登录和退出
 - 文章、闪念的新增、编辑、删除和状态管理
 - 创建时间只读，发布时间可修改，修改时间由代码更新
-- Markdown 工具栏和预览
+- Markdown 工具栏和预览，包含 Markdown 链接与 HTML A 标签快捷按钮
 - 封面 URL 输入及 R2 上传
 - 系统设置头像 URL 输入及 R2 上传
 - 分类与标签管理
-- 附件上传、插入、复制、查询和删除
+- 附件上传、模板选择、插入、复制、查询和删除
+- 附件模板新增、编辑和删除
 - 评论列表、分页、编辑和删除
 - 友链管理
 - 两组式前台导航管理
@@ -64,16 +66,14 @@ worker-blog/
 ├── seed.sql
 ├── static/
 │   ├── public.css
-│   └── public.js
+│   ├── public.js
+│   ├── admin.css
+│   └── admin.js
 ├── tsconfig.json
 ├── wrangler.toml
 └── src/
-    ├── assets/
-    │   ├── admin.css.ts
-    │   └── admin.js.ts
-    ├── components/
-    │   └── admin.tsx
     ├── lib/
+    │   ├── attachment-templates.ts
     │   ├── auth.ts
     │   ├── db.ts
     │   ├── favicon.ts
@@ -85,6 +85,21 @@ worker-blog/
     │   ├── admin.tsx
     │   └── public.tsx
     ├── views/
+    │   ├── admin/
+    │   │   ├── base.tsx
+    │   │   ├── shared.tsx
+    │   │   ├── login.tsx
+    │   │   ├── dashboard.tsx
+    │   │   ├── navigation.tsx
+    │   │   ├── contents.tsx
+    │   │   ├── content.tsx
+    │   │   ├── metas.tsx
+    │   │   ├── attachments.tsx
+    │   │   ├── attachment-templates.tsx
+    │   │   ├── comments.tsx
+    │   │   ├── comment.tsx
+    │   │   ├── links.tsx
+    │   │   └── options.tsx
     │   └── public/
     │       ├── base.tsx
     │       ├── header.tsx
@@ -115,7 +130,7 @@ worker-blog/
 - `about`、`page` 负责新增菜单选择的页面模板
 - 其余模块分别负责闪念、归档、分类、标签和友链页面
 
-前台样式和交互不再编译成 TypeScript 字符串。`static/public.css` 与 `static/public.js` 通过 `wrangler.toml` 的 `[assets]` 配置作为静态资源提供；后台资源仍由 `/assets/admin.css` 和 `/assets/admin.js` 路由输出。
+前台和后台样式、交互都不再编译成 TypeScript 字符串。`static/public.css`、`static/public.js`、`static/admin.css` 与 `static/admin.js` 通过 `wrangler.toml` 的 `[assets]` 配置提供。后台 JSX 也按页面拆分，`src/routes/admin.tsx` 只保留路由和业务数据处理。
 
 ## 5. 前台导航
 
@@ -173,9 +188,12 @@ worker-blog/
 
 ## 6. 页面模板
 
-`blog_contents` 不再使用 `type = page`。页面内容仍保存为 `type = post`，模板由新增菜单决定。
+`blog_contents` 使用独立的 `page` 类型保存页面。文章编辑页的发布区可以把普通内容设置为：
 
-新增菜单 URL 必须指向本地文章路径时才会应用模板，例如：
+- `post`：文章，参与首页、归档、分类、标签和 Atom 列表
+- `page`：页面，不参与文章列表，但可以通过 `/post/:slug` 独立访问
+
+新增菜单 URL 指向本地内容路径时可以选择模板，例如：
 
 ```text
 /post/about
@@ -184,16 +202,16 @@ worker-blog/
 
 模板规则：
 
-- `page`：只渲染对应文章的 `text`
-- `about`：先渲染头像、站点信息和社交链接，再渲染对应文章的 `text`
+- `page`：只渲染对应内容的 `text`
+- `about`：先渲染头像、站点信息和社交链接，再渲染对应内容的 `text`
 
-新增菜单只为匹配的 `/post/:slug` 选择模板，不会改变文章的列表可见性。只要文章满足公开状态和发布时间条件，就会出现在首页、归档、分类和标签列表；点击后再按菜单所选的 `page` 或 `about` 模板渲染。`/post/about` 没有硬编码的特殊路由。
+页面即使对应菜单被隐藏，仍可直接访问。没有匹配到新增菜单的 `page` 默认套用 `page` 模板；匹配到菜单时使用菜单选择的模板。`/post/about` 没有硬编码的特殊路由。
 
 ## 7. 数据模型
 
 ### 7.1 `blog_contents`
 
-统一保存文章、闪念和附件。
+统一保存文章、页面、闪念和附件。
 
 - `cid`：自增主键
 - `parent`：父内容 CID；普通内容和独立附件为 `0`，文章编辑页上传的正文附件和封面附件保存当前文章 CID
@@ -204,7 +222,7 @@ worker-blog/
 - `released`：发布时间，可手动修改
 - `text`：Markdown 正文或附件 JSON
 - `cover`：封面相对路径或外部 URL
-- `type`：`post`、`memo`、`atta`
+- `type`：`post`、`page`、`memo`、`atta`
 - `status`：`publish`、`draft`、`hidden`
 
 附件使用 `parent` 建立归属关系，并通过索引 `idx_contents_type_parent_created` 查询当前文章附件。
@@ -253,6 +271,7 @@ worker-blog/
 | `admin_comments_per_page` | `20` | 后台评论分页数 |
 | `admin_attachments_per_page` | `30` | 后台附件分页数 |
 | `navigation_menu` | JSON | 自带菜单与新增菜单配置 |
+| `attachment_templates` | JSON | 图片、视频、文件的附件插入模板 |
 | `footer_info` | Kehua 链接 HTML | 页脚信息，留空时只显示版权 |
 
 后台设置将四项前台分页配置放在一行，将四项后台分页配置放在下一行。FAVICON 文本预览位于文本输入框右侧，预览和颜色选择器均使用正方形控件。页脚版权年份运行时计算，站点名称读取 `site_title`；`footer_info` 非空时以 `· Theme by` 拼接其 HTML。
@@ -286,6 +305,18 @@ YYYY/MM/UUID.扩展名
 
 ## 8.1 附件后台交互
 
+后台主导航在“附件”后提供“模板”页面。模板记录包含名称、类型和模板文本，支持图片、视频、文件三类。模板中的 `FILE_NAME` 和 `RELATIVE_PATH` 会在插入时替换为附件原始文件名和数据库相对路径。
+
+默认模板为：
+
+```text
+图片  ![FILE_NAME](RELATIVE_PATH)
+视频  <video controls preload="metadata" src="RELATIVE_PATH">FILE_NAME</video>
+文件  [FILE_NAME](RELATIVE_PATH)
+```
+
+编辑文章或闪念时，上传正文附件或点击“插入”都会先选择匹配类型的模板；没有配置该类型模板时直接使用内置默认值。附件管理页生成后复制到剪贴板，内容编辑页同时写入编辑器。
+
 文章编辑页的封面上传按钮位于封面 URL 输入框内部右侧，按钮高度填满输入框且文字垂直、水平居中。封面上传成功后会立即把新附件插入右侧附件列表。文章编辑页和附件管理页的“插入”按钮都会复制对应 Markdown/HTML 到剪贴板；文章编辑页还会同步插入编辑器。友链图标和系统设置头像的上传按钮也位于对应输入框内部右侧；头像作为独立附件上传，使用 `parent = 0`。
 
 ## 9. 主要路由
@@ -316,13 +347,14 @@ YYYY/MM/UUID.扩展名
 | `/admin/login` | 管理员登录 |
 | `/admin` | 后台面板 |
 | `/admin/navigation` | 自带菜单和新增菜单管理 |
-| `/admin/contents?type=post` | 文章列表 |
+| `/admin/contents?type=post` | 文章与页面列表 |
 | `/admin/contents?type=memo` | 闪念列表 |
 | `/admin/content/new` | 新建内容 |
 | `/admin/content/:cid` | 编辑内容 |
 | `/admin/comments` | 评论管理 |
 | `/admin/metas` | 分类或标签管理 |
 | `/admin/attachments` | 附件管理 |
+| `/admin/attachment-templates` | 附件模板管理 |
 | `/admin/links` | 友链管理 |
 | `/admin/options` | 网站设置与数据管理 |
 | `/admin/data/export` | 导出 JSON |
@@ -347,7 +379,6 @@ YYYY/MM/UUID.扩展名
 - 非自增表使用 `INSERT ... ON CONFLICT DO UPDATE`
 - 旧附件类型 `attachment` 会转换为 `atta`
 - 旧附件 JSON 中的 `parentCid` 会转换到 `blog_contents.parent`
-- 旧内容中的 `type = page` 会转换为 `post`
 - 导入后重新计算分类和标签计数
 - 单个导入文件最大 20 MB
 
@@ -392,7 +423,7 @@ npm run db:schema:remote
 npm run db:seed:remote
 ```
 
-`seed.sql` 会先清空业务表，生成文章 300 条、评论 600 条、分类 3 个、标签 10 个。文章正文全部为 Markdown。
+`seed.sql` 会先清空业务表，生成文章 300 条、页面 1 条、评论 600 条、分类 3 个、标签 10 个。文章和页面正文全部为 Markdown。
 批量数据使用分段 `INSERT`，避免单条 SQL 过大。
 
 ## 13. 开发命令

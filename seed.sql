@@ -27,7 +27,7 @@ INSERT INTO blog_contents(cid,parent,title,slug,created,modified,released,text,c
 - 文件保存在 R2
 - 页面由 Cloudflare Workers 提供
 
-> 保持简单，也保持好奇。','','post','publish'),
+> 保持简单，也保持好奇。','','page','publish'),
 (2,0,'示例文章 001：Worker 博客开发记录','post-001',1758967200,1758976200,1758974400,'这是一篇用于演示列表、归档、分类、标签与评论功能的 Markdown 文章，编号为 **001**。
 
 ## 开发背景
@@ -7008,6 +7008,32 @@ INSERT INTO blog_contents(cid,parent,title,slug,created,modified,released,text,c
 (389,0,'2026-07-21 15:00','memo-089',1784616900,1784617200,1784617200,'闪念示例 89：今天记录一个简短想法，继续完善 Worker Blog 的细节。','','memo','publish'),
 (390,0,'2026-07-22 14:00','memo-090',1784699700,1784700000,1784700000,'闪念示例 90：今天记录一个简短想法，继续完善 Worker Blog 的细节。','','memo','publish');
 
+
+INSERT INTO blog_contents(cid,parent,title,slug,created,modified,released,text,cover,type,status) VALUES
+(391,0,'示例文章 300：Worker 博客开发记录','post-300',1784786400,1784791800,1784790000,'这是一篇用于演示列表、归档、分类、标签与评论功能的 Markdown 文章，编号为 **300**。
+
+## 开发背景
+
+Worker Blog 使用 Cloudflare Workers、D1 与 R2 组合运行。内容保存为 Markdown，在请求时渲染为 HTML。
+
+## 本文要点
+
+- 文章和页面使用独立类型
+- 页面不会出现在首页文章列表
+- 发布时间可以单独调整
+- 上传文件只保存相对路径
+
+> 示例数据用于验证分页与查询，不代表真实内容。
+
+## 代码片段
+
+```ts
+const articleId = 391
+console.log(`article: ${articleId}`)
+```
+
+最后，用一段普通文字结束这篇演示文章。它可以用于测试搜索摘要、阅读时间和字数统计。','','post','publish');
+
 INSERT INTO blog_metas(mid,name,slug,type,description,count) VALUES
 (1,'技术','technology','category','Cloudflare、编程与工程实践',0),
 (2,'生活','life','category','日常记录与生活观察',0),
@@ -8012,6 +8038,12 @@ INSERT INTO blog_relationships(cid,mid) VALUES
 (389,12),
 (390,13);
 
+
+INSERT INTO blog_relationships(cid,mid) VALUES
+(391,1),
+(391,4),
+(391,8);
+
 INSERT INTO blog_comments(id,name,email,site,text,created,cid) VALUES
 (1,'Alex','commenter001@example.com','','这是第 1 条模拟评论，用于测试评论列表、后台分页与文章详情页的局部翻页。',1783413420,2),
 (2,'小林','commenter002@example.com','','这是第 2 条模拟评论，用于测试评论列表、后台分页与文章详情页的局部翻页。',1783415640,3),
@@ -8640,6 +8672,7 @@ INSERT INTO blog_options("key",value) VALUES
 ('file_cdn_url',''),
 ('comments_enabled','true'),
 ('navigation_menu','[{"id":"home","name":"首页","url":"/","visible":true,"section":"fixed","order":10},{"id":"memos","name":"闪念","url":"/memos","visible":true,"section":"fixed","order":20},{"id":"archives","name":"归档","url":"/archives","visible":true,"section":"fixed","order":30},{"id":"categories","name":"分类","url":"/categories","visible":false,"section":"fixed","order":40},{"id":"tags","name":"标签","url":"/tags","visible":true,"section":"fixed","order":50},{"id":"links","name":"友链","url":"/links","visible":true,"section":"fixed","order":60},{"id":"about","name":"关于","url":"/post/about","visible":true,"section":"custom","template":"about","order":10}]'),
+('attachment_templates','[{"id":"default-image","name":"图片","type":"image","template":"![FILE_NAME](RELATIVE_PATH)"},{"id":"default-video","name":"视频","type":"video","template":"<video controls preload=\"metadata\" src=\"RELATIVE_PATH\">FILE_NAME</video>"},{"id":"default-file","name":"文件","type":"file","template":"[FILE_NAME](RELATIVE_PATH)"}]'),
 ('footer_info','<a href="https://github.com/Gridea-Pro/gridea-pro-themes/tree/main/themes/kehua" target="_blank" rel="noopener noreferrer">Kehua</a>'),
 ('site_timezone','Asia/Shanghai'),
 ('favicon_text','W'),
@@ -8650,4 +8683,4 @@ INSERT INTO blog_options("key",value) VALUES
 ('about_rss','/atom.xml'),
 ('about_email','');
 
--- 文章 300 条、评论 600 条、分类 3 个、标签 10 个。文章正文均为 Markdown。
+-- 文章 300 条、页面 1 条、评论 600 条、分类 3 个、标签 10 个。正文均为 Markdown。

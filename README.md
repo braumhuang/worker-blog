@@ -71,22 +71,38 @@ npm run deploy
 - `tag.tsx`、`category.tsx`：嵌入 `Posts` 渲染文章列表
 - `links.tsx`、`about.tsx`、`page.tsx`、`footer.tsx`
 
-前台 CSS 和 JavaScript 是实际静态文件，位于 `static/public.css` 和 `static/public.js`。后台 CSS 和 JavaScript 继续保留为 Worker 内的 TypeScript 字符串资源。
+前台和后台 CSS、JavaScript 都使用实际静态文件：`static/public.css`、`static/public.js`、`static/admin.css` 和 `static/admin.js`。后台页面 JSX 按页面拆分在 `src/views/admin/`，路由文件只负责数据读取、校验和写入。
+
+
+## 后台 JSX 与附件模板
+
+后台页面按职责拆分在 `src/views/admin/`，包括登录、面板、导航、内容列表、内容编辑、分类标签、附件、附件模板、评论、友链和系统设置。
+
+后台主导航在“附件”后增加“模板”。附件模板保存在 `blog_options.attachment_templates`，默认提供：
+
+- 图片：`![FILE_NAME](RELATIVE_PATH)`
+- 视频：`<video controls preload="metadata" src="RELATIVE_PATH">FILE_NAME</video>`
+- 文件：`[FILE_NAME](RELATIVE_PATH)`
+
+模板支持新增、编辑和删除。文章或闪念编辑页上传附件、点击附件“插入”时，会按文件类型弹出模板选择框，再替换 `FILE_NAME` 和 `RELATIVE_PATH`；该类型没有配置模板时直接使用内置默认值。附件管理页选择模板后复制生成内容，内容编辑页还会同步插入编辑器。Markdown 工具栏在“链接”右侧增加“A标签”按钮，插入 `<a href="https://" target="_blank">链接名称</a>`。
 
 ## 内容和页面模板
 
-`blog_contents.type` 只包含：
+`blog_contents.type` 包含：
 
-- `post`：文章，也作为自定义页面的数据来源
+- `post`：文章，出现在首页、归档、分类、标签和 Atom 订阅中
+- `page`：页面，不进入文章列表，但可以通过 `/post/:slug` 独立访问
 - `memo`：闪念
 - `atta`：附件
 
-不再使用 `type = page`。新增菜单指向 `/post/:slug`，并选择模板：
+文章编辑页的发布区可以在“文章”和“页面”之间切换类型。页面即使对应的新增菜单被隐藏，仍可通过自己的 `/post/:slug` 地址访问。
 
-- `页面`：只渲染该 `post.text`
-- `关于`：渲染关于页头像、社交资料和该 `post.text`
+新增菜单可以为页面选择模板：
 
-新增菜单只决定 `/post/:slug` 详情页使用的模板，不会把对应文章从首页、归档、分类或标签列表中排除。只要文章处于公开状态并到达发布时间，就会正常出现在前台列表。
+- `页面`：只渲染该内容的 `text`
+- `关于`：渲染关于页头像、社交资料和该内容的 `text`
+
+页面默认使用“页面”模板；与新增菜单 URL 匹配时使用菜单中选择的“页面”或“关于”模板。`/post/about` 没有单独硬编码。
 
 ## 导航
 
@@ -98,6 +114,8 @@ npm run deploy
 每组按次序从小到大排列，次序相同时按菜单名排列；保存后刷新页面即可看到新顺序。前台始终按照“自带菜单 + 新增菜单”的顺序组合。可见菜单超过 8 个时，前 7 个直接显示，第 8 个到最后收进“更多”菜单；桌面端支持悬浮或点击展开，手机端点击展开或折叠。
 
 分类菜单在桌面端悬浮显示分类列表，点击进入 `/categories/`；手机端点击展开子菜单。
+
+友链卡片左侧显示图标，右侧显示名称和描述；描述为空时右侧只显示名称，不再回退显示网址。
 
 ## 附件地址
 
@@ -121,18 +139,19 @@ npm run deploy
 
 `seed.sql` 会清空业务表并重新生成：
 
-- 文章 300 条，其中 `/post/about` 使用关于模板
+- 文章 300 条
+- 页面 1 条，`/post/about` 使用关于模板
 - 评论 600 条
 - 分类 3 个
 - 标签 10 个
 - 演示友链和系统设置
 
-所有文章正文均为 Markdown，不使用 HTML Seed 正文。
+文章和页面正文均为 Markdown，不使用 HTML Seed 正文。
 批量数据按多条较小的 `INSERT` 语句写入，兼容 Wrangler D1 本地导入。
 
 ## 数据导入与导出
 
-后台“系统设置”可以将业务表导出为 JSON，也可以导入该 JSON。旧附件类型 `attachment` 会在导入时转换为 `atta`。`blog_cookies` 和 R2 文件本体不会导出。自增表保留主键直接 `INSERT`，非自增表按主键更新或插入。旧数据中的 `type = page` 在导入时会转换为 `post`。
+后台“系统设置”可以将业务表导出为 JSON，也可以导入该 JSON。旧附件类型 `attachment` 会在导入时转换为 `atta`。`blog_cookies` 和 R2 文件本体不会导出。自增表保留主键直接 `INSERT`，非自增表按主键更新或插入；`post` 与 `page` 类型都会原样保留。
 
 ## Atom 与页脚
 

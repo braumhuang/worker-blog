@@ -1,8 +1,6 @@
 import { Hono } from 'hono'
 import { secureHeaders } from 'hono/secure-headers'
 import type { AppEnv, BlogMeta } from './types'
-import { adminCss } from './assets/admin.css'
-import { adminJs } from './assets/admin.js'
 import { Base } from './views/public/base'
 import { renderFaviconSvg } from './lib/favicon'
 import { getOptions } from './lib/options'
@@ -18,8 +16,6 @@ app.use('*', secureHeaders({
   referrerPolicy: 'strict-origin-when-cross-origin',
 }))
 
-app.get('/assets/admin.css', (c) => c.body(adminCss, 200, { 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }))
-app.get('/assets/admin.js', (c) => c.body(adminJs, 200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }))
 app.get('/favicon.svg', async (c) => {
   const options = await getOptions(c.env.BLOG_DB)
   return c.body(renderFaviconSvg(options), 200, {

@@ -2,6 +2,7 @@ import type { OptionMap } from '../types'
 import { dbAll } from './db'
 import { normalizeFaviconColor, normalizeFaviconText } from './favicon'
 import { DEFAULT_NAVIGATION_ITEMS, serializeNavigationItems } from './navigation'
+import { DEFAULT_ATTACHMENT_TEMPLATES, serializeAttachmentTemplates } from './attachment-templates'
 
 export const TIMEZONE_OPTIONS = [
   ['Pacific/Pago_Pago', 'UTC−11:00 萨摩亚'],
@@ -68,6 +69,7 @@ export const DEFAULT_OPTIONS: OptionMap = {
   file_cdn_url: '',
   comments_enabled: 'false',
   navigation_menu: serializeNavigationItems(DEFAULT_NAVIGATION_ITEMS),
+  attachment_templates: serializeAttachmentTemplates(DEFAULT_ATTACHMENT_TEMPLATES),
   footer_info: '<a href="https://github.com/Gridea-Pro/gridea-pro-themes/tree/main/themes/kehua" target="_blank" rel="noopener noreferrer">Kehua</a>',
   site_timezone: 'Asia/Shanghai',
   favicon_text: 'B',

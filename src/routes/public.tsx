@@ -122,11 +122,11 @@ publicRoutes.get('/', async (c) => {
 
 publicRoutes.get('/post/:slug/', async (c) => {
   const options = await getOptions(c.env.BLOG_DB)
-  const content = await dbFirst<BlogContent>(c.env.BLOG_DB, "SELECT * FROM blog_contents WHERE slug=? AND type='post' AND status='publish' AND released<=? LIMIT 1", c.req.param('slug'), nowSeconds())
+  const content = await dbFirst<BlogContent>(c.env.BLOG_DB, "SELECT * FROM blog_contents WHERE slug=? AND type IN ('post','page') AND status='publish' AND released<=? LIMIT 1", c.req.param('slug'), nowSeconds())
   if (!content) return c.notFound()
   const [item] = await enrichContents(c.env.BLOG_DB, [content])
   const navigationItem = customNavigationItemForSlug(options, content.slug)
-  const template = navigationItem?.template
+  const template = navigationItem?.template ?? (content.type === 'page' ? 'page' : undefined)
   const html = resolveUploadedUrls(renderMarkdown(content.text), options.file_cdn_url)
   const commentsEnabled = options.comments_enabled === 'true'
   const commentData = commentsEnabled ? await commentsForContent(c, content, options) : null
@@ -143,7 +143,7 @@ publicRoutes.get('/post/:slug/', async (c) => {
 publicRoutes.post('/post/:slug/comments', async (c) => {
   const options = await getOptions(c.env.BLOG_DB)
   if (options.comments_enabled !== 'true') return c.notFound()
-  const content = await dbFirst<BlogContent>(c.env.BLOG_DB, "SELECT * FROM blog_contents WHERE slug=? AND type='post' AND status='publish' AND released<=? LIMIT 1", c.req.param('slug'), nowSeconds())
+  const content = await dbFirst<BlogContent>(c.env.BLOG_DB, "SELECT * FROM blog_contents WHERE slug=? AND type IN ('post','page') AND status='publish' AND released<=? LIMIT 1", c.req.param('slug'), nowSeconds())
   if (!content) return c.notFound()
   const form = await c.req.formData()
   const name = String(form.get('name') ?? '').trim().slice(0, 100)
@@ -246,6 +246,6 @@ publicRoutes.get('/api/search', async (c) => {
   const q = c.req.query('q')?.trim()
   if (!q) return c.json({ items: [] })
   const like = `%${q.replaceAll('%', '\\%').replaceAll('_', '\\_')}%`
-  const rows = await dbAll<BlogContent>(c.env.BLOG_DB, "SELECT DISTINCT c.* FROM blog_contents c LEFT JOIN blog_relationships r ON r.cid=c.cid LEFT JOIN blog_metas m ON m.mid=r.mid WHERE c.status='publish' AND c.released<=? AND c.type IN ('post','memo') AND (c.title LIKE ? ESCAPE '\\' OR c.text LIKE ? ESCAPE '\\' OR m.name LIKE ? ESCAPE '\\') ORDER BY c.released DESC LIMIT 12", nowSeconds(), like, like, like)
+  const rows = await dbAll<BlogContent>(c.env.BLOG_DB, "SELECT DISTINCT c.* FROM blog_contents c LEFT JOIN blog_relationships r ON r.cid=c.cid LEFT JOIN blog_metas m ON m.mid=r.mid WHERE c.status='publish' AND c.released<=? AND c.type IN ('post','page','memo') AND (c.title LIKE ? ESCAPE '\\' OR c.text LIKE ? ESCAPE '\\' OR m.name LIKE ? ESCAPE '\\') ORDER BY c.released DESC LIMIT 12", nowSeconds(), like, like, like)
   return c.json({ items: rows.map((row) => ({ title: row.title, excerpt: excerptOf(row.text, 90), url: row.type === 'memo' ? `/memos/#memo-${row.cid}` : `/post/${encodeURIComponent(row.slug)}/` })) })
 })
