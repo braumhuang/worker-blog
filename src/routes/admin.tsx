@@ -20,6 +20,7 @@ import {
   verifyCredentials,
 } from "../lib/auth";
 import { dbAll, dbFirst, dbRun } from "../lib/db";
+import { invalidateOptionsCache } from "../lib/cache";
 import { normalizeFaviconColor, normalizeFaviconText } from "../lib/favicon";
 import { renderMarkdown } from "../lib/markdown";
 import {
@@ -70,6 +71,8 @@ import { LinksPage } from "../views/admin/links";
 import { OptionsPage } from "../views/admin/options";
 
 export const adminRoutes = new Hono<AppEnv>();
+
+const DATA_EXPORT_VERSION = 1;
 
 function validContentType(
   value: string | undefined,
@@ -947,7 +950,11 @@ adminRoutes.get("/admin/data/export", async (c) => {
   const filename = `worker-blog-${new Date().toISOString().slice(0, 10)}.json`;
   return c.body(
     JSON.stringify(
-      { version: 6, exportedAt: new Date().toISOString(), tables: data },
+      {
+        version: DATA_EXPORT_VERSION,
+        exportedAt: new Date().toISOString(),
+        tables: data,
+      },
       null,
       2,
     ),
@@ -981,6 +988,8 @@ adminRoutes.post("/admin/data/import", async (c) => {
     Array.isArray(payload.tables)
   )
     return c.text("导入文件缺少 tables 数据", 400);
+  if (payload.version !== DATA_EXPORT_VERSION)
+    return c.text("导入文件版本与当前项目不一致", 400);
   const specs: Array<{
     table: string;
     columns: string[];
@@ -1043,50 +1052,16 @@ adminRoutes.post("/admin/data/import", async (c) => {
       if (!Array.isArray(rows)) continue;
       for (const row of rows) {
         if (!row || typeof row !== "object" || Array.isArray(row)) continue;
-        const normalizedRow: Record<string, unknown> = { ...row };
         if (
-          spec.table === "blog_contents" &&
-          normalizedRow.type === "attachment"
+          !spec.columns.every((column) =>
+            Object.prototype.hasOwnProperty.call(row, column),
+          )
         )
-          normalizedRow.type = "atta";
-        if (
-          spec.table === "blog_contents" &&
-          !Object.prototype.hasOwnProperty.call(normalizedRow, "parent")
-        ) {
-          let legacyParent = 0;
-          if (
-            normalizedRow.type === "atta" &&
-            typeof normalizedRow.text === "string"
-          ) {
-            try {
-              const parsedInfo = JSON.parse(normalizedRow.text) as unknown;
-              if (
-                parsedInfo &&
-                typeof parsedInfo === "object" &&
-                !Array.isArray(parsedInfo)
-              ) {
-                const legacyInfo = parsedInfo as Record<string, unknown>;
-                legacyParent = Math.max(0, intValue(legacyInfo.parentCid));
-                if (
-                  Object.prototype.hasOwnProperty.call(legacyInfo, "parentCid")
-                ) {
-                  delete legacyInfo.parentCid;
-                  normalizedRow.text = JSON.stringify(legacyInfo);
-                }
-              }
-            } catch {
-              legacyParent = 0;
-            }
-          }
-          normalizedRow.parent = legacyParent;
-        }
-        const columns = spec.columns.filter((column) =>
-          Object.prototype.hasOwnProperty.call(normalizedRow, column),
-        );
-        if (!spec.keys.every((key) => columns.includes(key))) continue;
+          return c.text(`${spec.table} 数据字段不完整`, 400);
+        const columns = spec.columns;
         const quoted = columns.map((column) => `"${column}"`).join(", ");
         const placeholders = columns.map(() => "?").join(", ");
-        const values = columns.map((column) => normalizedRow[column]);
+        const values = columns.map((column) => row[column]);
         if (spec.autoIncrement)
           await dbRun(
             c.env.BLOG_DB,
@@ -1112,6 +1087,7 @@ adminRoutes.post("/admin/data/import", async (c) => {
       c.env.BLOG_DB,
       "UPDATE blog_metas SET count = (SELECT COUNT(*) FROM blog_relationships r WHERE r.mid = blog_metas.mid)",
     );
+    await invalidateOptionsCache();
   } catch (error) {
     console.error(error);
     return c.text(

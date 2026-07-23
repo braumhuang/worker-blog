@@ -212,10 +212,7 @@ export function normalizeNavigationItems(
       fixedPosition += 1;
       fixed.push({
         id,
-        name: cleanNavigationName(
-          id === "links" && source.name === "导航" ? "友链" : source.name,
-          fallback.name,
-        ),
+        name: cleanNavigationName(source.name, fallback.name),
         url: fallback.url,
         visible: id === "home" ? true : source.visible !== false,
         section: "fixed",

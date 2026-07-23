@@ -1,5 +1,10 @@
 import type { OptionMap } from "../types";
 import { dbAll } from "./db";
+import {
+  getCachedOptions,
+  invalidateOptionsCache,
+  putCachedOptions,
+} from "./cache";
 import { normalizeFaviconColor, normalizeFaviconText } from "./favicon";
 import {
   DEFAULT_NAVIGATION_ITEMS,
@@ -101,6 +106,9 @@ export const DEFAULT_OPTIONS: OptionMap = {
 };
 
 export async function getOptions(db: D1Database): Promise<OptionMap> {
+  const cached = await getCachedOptions();
+  if (cached) return cached;
+
   const rows = await dbAll<{ key: string; value: string }>(
     db,
     'SELECT "key" AS key, value FROM blog_options',
@@ -117,6 +125,7 @@ export async function getOptions(db: D1Database): Promise<OptionMap> {
   options.comments_enabled =
     options.comments_enabled === "true" ? "true" : "false";
   options.file_cdn_url = normalizeFileCdnUrl(options.file_cdn_url);
+  await putCachedOptions(options);
   return options;
 }
 
@@ -134,5 +143,8 @@ export async function saveOptions(
       )
       .bind(key, value),
   );
-  if (statements.length) await db.batch(statements);
+  if (statements.length) {
+    await db.batch(statements);
+    await invalidateOptionsCache();
+  }
 }

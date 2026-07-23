@@ -235,11 +235,7 @@ export function publicAttachmentUrl(
     /^(?:data|blob):/i.test(value)
   )
     return value;
-  const clean = value.startsWith("/uploads/")
-    ? value.slice("/uploads".length)
-    : value.startsWith("/")
-      ? value
-      : `/${value}`;
+  const clean = value.startsWith("/") ? value : `/${value}`;
   const base = configuredBase?.trim().replace(/\/+$/, "");
   return base ? `${base}${clean}` : `/uploads${clean}`;
 }
@@ -249,7 +245,7 @@ export function resolveUploadedUrls(
   configuredBase?: string,
 ): string {
   return html.replace(
-    /(src|href|poster)=(['"])(\/(?:uploads\/)?(?:\d{4}\/\d{2}|seed)\/[^'"<>]+)\2/g,
+    /(src|href|poster)=(['"])(\/(?:\d{4}\/\d{2}|seed)\/[^'"<>]+)\2/g,
     (_m, attr, quote, path) =>
       `${attr}=${quote}${publicAttachmentUrl(path, configuredBase)}${quote}`,
   );
