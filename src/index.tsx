@@ -1,13 +1,13 @@
 import { Hono } from 'hono'
 import { secureHeaders } from 'hono/secure-headers'
-import type { AppEnv } from './types'
+import type { AppEnv, BlogMeta } from './types'
 import { adminCss } from './assets/admin.css'
 import { adminJs } from './assets/admin.js'
-import { publicCss } from './assets/public.css'
-import { publicJs } from './assets/public.js'
-import { PublicLayout } from './components/public'
+import { Base } from './views/public/base'
 import { renderFaviconSvg } from './lib/favicon'
 import { getOptions } from './lib/options'
+import { dbAll } from './lib/db'
+import { navigationItemsFromOptions } from './lib/navigation'
 import { adminRoutes } from './routes/admin'
 import { publicRoutes } from './routes/public'
 
@@ -18,9 +18,7 @@ app.use('*', secureHeaders({
   referrerPolicy: 'strict-origin-when-cross-origin',
 }))
 
-app.get('/assets/public.css', (c) => c.body(publicCss, 200, { 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }))
 app.get('/assets/admin.css', (c) => c.body(adminCss, 200, { 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }))
-app.get('/assets/public.js', (c) => c.body(publicJs, 200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }))
 app.get('/assets/admin.js', (c) => c.body(adminJs, 200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }))
 app.get('/favicon.svg', async (c) => {
   const options = await getOptions(c.env.BLOG_DB)
@@ -87,10 +85,13 @@ app.notFound(async (c) => {
   if (c.req.path.startsWith('/admin')) return c.text('Not Found', 404)
   try {
     const options = await getOptions(c.env.BLOG_DB)
+    const categories = navigationItemsFromOptions(options).some((item) => item.id === 'categories' && item.visible)
+      ? await dbAll<BlogMeta>(c.env.BLOG_DB, "SELECT * FROM blog_metas WHERE type='category' ORDER BY count DESC,name COLLATE NOCASE")
+      : []
     return c.html(
-      <PublicLayout options={options} title="页面不存在">
+      <Base options={options} title="页面不存在" categories={categories}>
         <section class="error-page"><strong>404</strong><h1>页面不存在</h1><p>你访问的内容可能已被移动或删除。</p><a class="tag-pill" href="/">返回首页</a></section>
-      </PublicLayout>,
+      </Base>,
       404,
     )
   } catch {

@@ -6,8 +6,6 @@ workers_dev = true
 [vars]
 ADMIN_NAME = "admin"
 ADMIN_PSWD = "12345678"
-# 可选：配置 R2 自定义公开域名，例如 https://static.example.com
-R2_PUBLIC_URL = ""
 MAX_UPLOAD_MB = "25"
 
 [[d1_databases]]
@@ -18,3 +16,6 @@ database_id = "00000000-0000-0000-0000-000000000000"
 [[r2_buckets]]
 binding = "BLOG_R2"
 bucket_name = "worker-blog-assets"
+
+[assets]
+directory = "./static"

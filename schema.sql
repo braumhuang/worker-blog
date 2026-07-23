@@ -2,6 +2,7 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS blog_contents (
   cid INTEGER PRIMARY KEY AUTOINCREMENT,
+  parent INTEGER NOT NULL DEFAULT 0 CHECK (parent >= 0),
   title TEXT NOT NULL DEFAULT '',
   slug TEXT NOT NULL DEFAULT '',
   created INTEGER NOT NULL,
@@ -9,7 +10,7 @@ CREATE TABLE IF NOT EXISTS blog_contents (
   released INTEGER NOT NULL,
   text TEXT NOT NULL DEFAULT '',
   cover TEXT NOT NULL DEFAULT '',
-  type TEXT NOT NULL CHECK (type IN ('post', 'page', 'attachment', 'memo')),
+  type TEXT NOT NULL CHECK (type IN ('post', 'atta', 'memo')),
   status TEXT NOT NULL CHECK (status IN ('publish', 'draft', 'hidden')) DEFAULT 'draft'
 );
 
@@ -17,11 +18,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_contents_type_slug
   ON blog_contents(type, slug);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_public_content_slug
   ON blog_contents(slug)
-  WHERE type IN ('post', 'page');
+  WHERE type = 'post';
 CREATE INDEX IF NOT EXISTS idx_contents_type_status_released
   ON blog_contents(type, status, released DESC);
 CREATE INDEX IF NOT EXISTS idx_contents_modified
   ON blog_contents(modified DESC);
+CREATE INDEX IF NOT EXISTS idx_contents_type_parent_created
+  ON blog_contents(type, parent, created DESC);
 
 CREATE TABLE IF NOT EXISTS blog_metas (
   mid INTEGER PRIMARY KEY AUTOINCREMENT,

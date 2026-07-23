@@ -126,7 +126,7 @@ export function safeJson<T>(value: string, fallback: T): T {
 }
 
 export function attachmentInfo(content: BlogContent): AttachmentInfo | null {
-  if (content.type !== 'attachment') return null
+  if (content.type !== 'atta') return null
   return safeJson<AttachmentInfo | null>(content.text, null)
 }
 
@@ -157,9 +157,20 @@ export function safeReturnTo(value: string | undefined): string {
   return value
 }
 
-export function publicAttachmentUrl(origin: string, key: string, configuredBase?: string): string {
-  const base = configuredBase?.trim().replace(/\/$/, '')
-  return base ? `${base}/${key.split('/').map(encodeURIComponent).join('/')}` : `${origin}/uploads/${key.split('/').map(encodeURIComponent).join('/')}`
+export function attachmentPath(key: string): string {
+  return `/${key.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')}`
+}
+
+export function publicAttachmentUrl(path: string, configuredBase?: string): string {
+  const value = path.trim()
+  if (!value || /^(?:https?:)?\/\//i.test(value) || /^(?:data|blob):/i.test(value)) return value
+  const clean = value.startsWith('/uploads/') ? value.slice('/uploads'.length) : value.startsWith('/') ? value : `/${value}`
+  const base = configuredBase?.trim().replace(/\/+$/, '')
+  return base ? `${base}${clean}` : `/uploads${clean}`
+}
+
+export function resolveUploadedUrls(html: string, configuredBase?: string): string {
+  return html.replace(/(src|href|poster)=(['"])(\/(?:uploads\/)?(?:\d{4}\/\d{2}|seed)\/[^'"<>]+)\2/g, (_m, attr, quote, path) => `${attr}=${quote}${publicAttachmentUrl(path, configuredBase)}${quote}`)
 }
 
 export function fileKind(mime: string): 'image' | 'video' | 'file' {

@@ -1,4 +1,4 @@
-export type ContentType = 'post' | 'page' | 'attachment' | 'memo'
+export type ContentType = 'post' | 'atta' | 'memo'
 export type ContentStatus = 'publish' | 'draft' | 'hidden'
 export type MetaType = 'tag' | 'category'
 
@@ -7,7 +7,6 @@ export type Bindings = {
   BLOG_R2: R2Bucket
   ADMIN_NAME: string
   ADMIN_PSWD: string
-  R2_PUBLIC_URL?: string
   MAX_UPLOAD_MB?: string
 }
 
@@ -22,6 +21,7 @@ export type AppEnv = {
 
 export interface BlogContent {
   cid: number
+  parent: number
   title: string
   slug: string
   created: number
@@ -61,12 +61,24 @@ export interface BlogComment {
   cid: number
 }
 
+export type NavigationSection = 'fixed' | 'custom'
+export type NavigationTemplate = 'page' | 'about'
+
+export interface NavigationItem {
+  id: string
+  name: string
+  url: string
+  visible: boolean
+  section: NavigationSection
+  template?: NavigationTemplate
+  order: number
+}
+
 export interface AttachmentInfo {
   key: string
   url: string
   mime: string
   size: number
-  parentCid: number | null
   originalName: string
 }
 

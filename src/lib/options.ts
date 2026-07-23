@@ -1,6 +1,7 @@
 import type { OptionMap } from '../types'
 import { dbAll } from './db'
 import { normalizeFaviconColor, normalizeFaviconText } from './favicon'
+import { DEFAULT_NAVIGATION_ITEMS, serializeNavigationItems } from './navigation'
 
 export const TIMEZONE_OPTIONS = [
   ['Pacific/Pago_Pago', 'UTC−11:00 萨摩亚'],
@@ -41,15 +42,33 @@ export const TIMEZONE_OPTIONS = [
 
 export const TIMEZONE_VALUES = new Set<string>(TIMEZONE_OPTIONS.map(([value]) => value))
 
+export function normalizeFileCdnUrl(value: string): string {
+  const trimmed = value.trim().replace(/\/+$/, '')
+  if (!trimmed) return ''
+  try {
+    const parsed = new URL(trimmed)
+    if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname || parsed.username || parsed.password || parsed.search || parsed.hash) return ''
+    return trimmed
+  } catch {
+    return ''
+  }
+}
+
 export const DEFAULT_OPTIONS: OptionMap = {
   site_title: 'My Hono Blog',
   site_description: 'Stay Young, Stay Simple.',
   posts_per_page: '10',
   memos_per_page: '20',
+  archives_per_page: '50',
   comments_per_page: '20',
+  admin_contents_per_page: '25',
+  admin_memos_per_page: '25',
+  admin_comments_per_page: '20',
+  admin_attachments_per_page: '30',
+  file_cdn_url: '',
   comments_enabled: 'false',
-  about_slug: 'about',
-  footer_text: 'Stay Young, Stay Simple.',
+  navigation_menu: serializeNavigationItems(DEFAULT_NAVIGATION_ITEMS),
+  footer_info: '<a href="https://github.com/Gridea-Pro/gridea-pro-themes/tree/main/themes/kehua" target="_blank" rel="noopener noreferrer">Kehua</a>',
   site_timezone: 'Asia/Shanghai',
   favicon_text: 'B',
   favicon_color: '#999999',
@@ -62,11 +81,13 @@ export const DEFAULT_OPTIONS: OptionMap = {
 
 export async function getOptions(db: D1Database): Promise<OptionMap> {
   const rows = await dbAll<{ key: string; value: string }>(db, 'SELECT "key" AS key, value FROM blog_options')
-  const options = Object.assign({}, DEFAULT_OPTIONS, Object.fromEntries(rows.map((row) => [row.key, row.value])))
+  const stored = Object.fromEntries(rows.map((row) => [row.key, row.value]))
+  const options = Object.assign({}, DEFAULT_OPTIONS, stored)
   options.favicon_color = normalizeFaviconColor(options.favicon_color)
   options.favicon_text = normalizeFaviconText(options.favicon_text, Array.from(options.site_title.trim())[0] || 'B')
   if (!TIMEZONE_VALUES.has(options.site_timezone)) options.site_timezone = DEFAULT_OPTIONS.site_timezone
   options.comments_enabled = options.comments_enabled === 'true' ? 'true' : 'false'
+  options.file_cdn_url = normalizeFileCdnUrl(options.file_cdn_url)
   return options
 }
 

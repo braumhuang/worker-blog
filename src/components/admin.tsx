@@ -2,8 +2,8 @@ import type { PropsWithChildren } from 'hono/jsx'
 
 const adminNav = [
   ['/admin', '面板'],
+  ['/admin/navigation', '导航'],
   ['/admin/contents?type=post', '文章'],
-  ['/admin/contents?type=page', '页面'],
   ['/admin/contents?type=memo', '闪念'],
   ['/admin/comments', '评论'],
   ['/admin/metas?type=category', '分类'],

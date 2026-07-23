@@ -246,6 +246,28 @@ input[type="checkbox"], input[type="radio"] { margin: 0 3px 0 0; vertical-align:
 .side-box-body > .button.primary { margin-top: 1px; }
 .cover-url-field { margin-bottom: 1px; }
 .input-action-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
+.input-inline-action { position: relative; }
+.input-inline-action .input { padding-right: 72px; }
+.input-inline-button {
+  position: absolute;
+  inset: 0 0 0 auto;
+  min-width: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 14px;
+  color: #555;
+  background: var(--admin-soft);
+  border: 1px solid var(--admin-line);
+  border-radius: 0 2px 2px 0;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+.input-inline-button:hover { color: var(--admin-primary); background: #fff; }
+.input-inline-action .input:focus + .input-inline-button { border-color: #a5cadc; }
 .input-action-row .button { min-height: 36px; }
 .memo-editor-note {
   padding: 10px 12px;
@@ -451,12 +473,40 @@ tr:hover .row-actions { opacity: 1; }
 .comment-context span { color: var(--admin-muted); }
 .settings-inline { display: grid; grid-template-columns: minmax(180px,.75fr) minmax(300px,1.25fr); gap: 16px; }
 .settings-three-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.settings-four-columns { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .option-check { padding: 11px 12px; background: var(--admin-bg); }
 .option-check label { margin-bottom: 2px; }
-.favicon-setting-row { display: grid; grid-template-columns: minmax(150px,1fr) 42px 42px; gap: 8px; align-items: center; }
+.favicon-text-row, .favicon-setting-row { display: grid; grid-template-columns: minmax(150px,1fr) 38px; gap: 8px; align-items: center; }
 .favicon-color-text { min-width: 0; }
-.favicon-color-picker { width: 42px; height: 36px; padding: 2px; background: #fff; border: 1px solid var(--admin-line); border-radius: 2px; cursor: pointer; }
-.favicon-preview { --favicon-color: #999999; width: 42px; height: 42px; display: grid; place-items: center; overflow: hidden; color: #fff; background: var(--favicon-color); border-radius: 9px; font-size: 20px; line-height: 1; font-weight: 700; }
+.favicon-color-picker { width: 38px; height: 38px; padding: 3px; background: #fff; border: 1px solid var(--admin-line); border-radius: 2px; cursor: pointer; }
+.favicon-preview { --favicon-color: #999999; width: 38px; height: 38px; display: grid; place-items: center; overflow: hidden; color: #fff; background: var(--favicon-color); border: 1px solid var(--admin-line); border-radius: 2px; font-size: 18px; line-height: 1; font-weight: 700; }
+.navigation-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 0 2px; }
+.navigation-list-head > span { color: #555; font-weight: 600; }
+.navigation-form { gap: 18px; }
+.navigation-section { margin: 0; }
+.navigation-list { display: grid; gap: 8px; }
+.navigation-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 86px minmax(150px, .8fr) minmax(240px, 1.35fr) 88px 72px;
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-line-light);
+  border-radius: 2px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.navigation-row-custom {
+  grid-template-columns: 86px minmax(140px, .7fr) minmax(220px, 1.15fr) 110px 82px 72px;
+}
+.navigation-order-field, .navigation-template-field { min-width: 0; }
+.navigation-url-field .input[readonly] { color: #777; background: #f4f4f1; cursor: default; }
+.navigation-visible-field { align-self: center; color: #555; }
+.navigation-visible-field label { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.navigation-visible-field small { display: block; margin-top: 4px; color: var(--admin-muted); font-size: 11px; }
+.navigation-delete-field { align-self: center; text-align: center; white-space: nowrap; }
 .empty-state { padding: 30px; color: var(--admin-muted); text-align: center; }
 
 /* login */
@@ -486,6 +536,7 @@ tr:hover .row-actions { opacity: 1; }
   .form-grid { grid-template-columns: minmax(0,1fr) 250px; gap: 14px; }
   .two-columns, .dashboard-columns, .settings-inline { grid-template-columns: 1fr; }
   .meta-columns, .link-columns, .settings-three-columns { grid-template-columns: 1fr; }
+  .settings-four-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 767px) {
@@ -496,6 +547,8 @@ tr:hover .row-actions { opacity: 1; }
   .side-form .side-box:first-child { grid-column: 1 / -1; }
   .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .comments-admin-table th:nth-child(n) { width: auto; }
+  .navigation-row { grid-template-columns: 76px minmax(130px, .8fr) minmax(220px, 1.2fr) 72px 66px; gap: 8px; }
+  .navigation-row-custom { grid-template-columns: 76px minmax(130px, .75fr) minmax(200px, 1.1fr) 96px 76px 66px; }
   .editor-workspace.preview-visible { grid-template-columns: 1fr; }
   .editor-preview { border-left: 0; border-top: 1px solid var(--admin-line-light); }
   .admin-table { border-width: 10px; }
@@ -512,9 +565,14 @@ tr:hover .row-actions { opacity: 1; }
   .side-form { grid-template-columns: 1fr; }
   .side-form .side-box:first-child { grid-column: auto; }
   .stats-grid { grid-template-columns: 1fr; }
-  .favicon-setting-row { grid-template-columns: minmax(0,1fr) 42px; }
-  .favicon-preview { display: none; }
+  .favicon-text-row, .favicon-setting-row { grid-template-columns: minmax(0,1fr) 38px; }
   .admin-mobile-panel nav { grid-template-columns: 1fr; }
+  .settings-four-columns { grid-template-columns: 1fr; }
+  .navigation-list-head { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .navigation-row { grid-template-columns: 1fr; align-items: center; padding-right: 12px; }
+  .navigation-order-field, .navigation-name-field, .navigation-url-field, .navigation-template-field { grid-column: 1; padding-right: 0; }
+  .navigation-visible-field { grid-column: 1; }
+  .navigation-delete-field { grid-column: 1; text-align: left; }
   .panel:has(.admin-table) { overflow-x: auto; }
   .admin-table { min-width: 620px; }
   .comments-admin-table { min-width: 760px; }
