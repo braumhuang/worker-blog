@@ -23,18 +23,20 @@ import {
   positiveInt,
   resolveUploadedUrls,
 } from "../lib/utils";
-import { Base } from "../views/public/base";
-import { PostsPage } from "../views/public/posts";
-import { Post, Comments, type CommentPageData } from "../views/public/post";
-import { Memos, type MemoActivityDay } from "../views/public/memos";
-import { Archives } from "../views/public/archives";
-import { Categories } from "../views/public/categories";
-import { Tags } from "../views/public/tags";
-import { Tag } from "../views/public/tag";
-import { Category } from "../views/public/category";
-import { Links } from "../views/public/links";
-import { About } from "../views/public/about";
-import { Page } from "../views/public/page";
+import { getThemeComponents } from "../views/themes/theme";
+
+type CommentPageData = {
+  comments: BlogComment[];
+  page: number;
+  total: number;
+  totalPages: number;
+};
+
+type MemoActivityDay = {
+  day: string;
+  count: number;
+  level: number;
+};
 
 export const publicRoutes = new Hono<AppEnv>();
 type MetaJoin = BlogMeta & { cid: number };
@@ -108,6 +110,7 @@ async function listByMeta(
   slug: string,
 ) {
   const options = await getOptions(c.env.BLOG_DB);
+  const { Base, Tag, Category } = getThemeComponents(options.site_theme);
   const meta = await dbFirst<BlogMeta>(
     c.env.BLOG_DB,
     "SELECT * FROM blog_metas WHERE type=? AND slug=? LIMIT 1",
@@ -232,6 +235,7 @@ publicRoutes.get("/post/:slug", (c) =>
 
 publicRoutes.get("/", async (c) => {
   const options = await getOptions(c.env.BLOG_DB);
+  const { Base, Index: HomePage } = getThemeComponents(options.site_theme);
   const now = nowSeconds();
   const page = positiveInt(c.req.query("page"), 1, 100000);
   const perPage = positiveInt(options.posts_per_page, 10, 100);
@@ -256,7 +260,7 @@ publicRoutes.get("/", async (c) => {
       active="home"
       categories={await navigationCategories(c.env.BLOG_DB, options)}
     >
-      <PostsPage
+      <HomePage
         posts={posts}
         timeZone={options.site_timezone}
         fileCdnUrl={options.file_cdn_url}
@@ -269,6 +273,9 @@ publicRoutes.get("/", async (c) => {
 
 publicRoutes.get("/post/:slug/", async (c) => {
   const options = await getOptions(c.env.BLOG_DB);
+  const { About, Base, Comments, Page, Post } = getThemeComponents(
+    options.site_theme,
+  );
   const content = await dbFirst<BlogContent>(
     c.env.BLOG_DB,
     "SELECT * FROM blog_contents WHERE slug=? AND type IN ('post','page') AND status='publish' AND released<=? LIMIT 1",
@@ -328,6 +335,7 @@ publicRoutes.get("/post/:slug/", async (c) => {
 
 publicRoutes.post("/post/:slug/comments", async (c) => {
   const options = await getOptions(c.env.BLOG_DB);
+  const { Comments } = getThemeComponents(options.site_theme);
   if (options.comments_enabled !== "true") return c.notFound();
   const content = await dbFirst<BlogContent>(
     c.env.BLOG_DB,
@@ -392,6 +400,7 @@ publicRoutes.post("/post/:slug/comments", async (c) => {
 
 publicRoutes.get("/memos/", async (c) => {
   const options = await getOptions(c.env.BLOG_DB);
+  const { Base, Memos } = getThemeComponents(options.site_theme);
   const now = nowSeconds();
   const page = positiveInt(c.req.query("page"), 1, 100000);
   const perPage = positiveInt(options.memos_per_page, 20, 100);
@@ -465,6 +474,7 @@ publicRoutes.get("/memos/", async (c) => {
 
 publicRoutes.get("/archives/", async (c) => {
   const options = await getOptions(c.env.BLOG_DB);
+  const { Archives, Base } = getThemeComponents(options.site_theme);
   const now = nowSeconds();
   const page = positiveInt(c.req.query("page"), 1, 100000);
   const perPage = positiveInt(options.archives_per_page, 50, 100);
@@ -513,6 +523,7 @@ publicRoutes.get("/archives/", async (c) => {
 
 publicRoutes.get("/categories/", async (c) => {
   const options = await getOptions(c.env.BLOG_DB);
+  const { Base, Categories } = getThemeComponents(options.site_theme);
   const categories = await dbAll<BlogMeta>(
     c.env.BLOG_DB,
     "SELECT * FROM blog_metas WHERE type='category' ORDER BY count DESC,name COLLATE NOCASE",
@@ -531,6 +542,7 @@ publicRoutes.get("/categories/", async (c) => {
 
 publicRoutes.get("/tags/", async (c) => {
   const options = await getOptions(c.env.BLOG_DB);
+  const { Base, Tags } = getThemeComponents(options.site_theme);
   const tags = await dbAll<BlogMeta>(
     c.env.BLOG_DB,
     "SELECT * FROM blog_metas WHERE type='tag' ORDER BY count DESC,name COLLATE NOCASE",
@@ -556,6 +568,7 @@ publicRoutes.get("/category/:slug/", (c) =>
 
 publicRoutes.get("/links/", async (c) => {
   const options = await getOptions(c.env.BLOG_DB);
+  const { Base, Links } = getThemeComponents(options.site_theme);
   const links = await dbAll<BlogLink>(
     c.env.BLOG_DB,
     'SELECT id,name,url,icon,info,"order" AS "order" FROM blog_links ORDER BY "order" DESC,id DESC',

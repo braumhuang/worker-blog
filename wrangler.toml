@@ -2,10 +2,9 @@ name = "worker-blog"
 main = "src/index.tsx"
 compatibility_date = "2026-07-15"
 workers_dev = true
+preview_urls = true
 
 [vars]
-ADMIN_NAME = "admin"
-ADMIN_PSWD = "12345678"
 MAX_UPLOAD_MB = "25"
 
 [[d1_databases]]

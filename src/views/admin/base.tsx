@@ -24,6 +24,8 @@ function activeNav(title: string, label: string): boolean {
   if (label === "面板") return title === "面板";
   if (label === "设置") return title.includes("设置");
   if (label === "模板") return title.includes("附件模板");
+  if (label === "附件")
+    return title.includes("附件") && !title.includes("附件模板");
   if (label === "文章") return title.includes("文章") || title.includes("页面");
   return title.includes(label);
 }
@@ -41,7 +43,7 @@ export function AdminLayout({
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>{title} · 博客后台</title>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="stylesheet" href="/admin.css" />
+        <link rel="stylesheet" href="/admin/admin.css" />
       </head>
       <body>
         <header class="admin-topbar">
@@ -100,7 +102,7 @@ export function AdminLayout({
         <footer class="admin-footer">
           <p>Powered by Worker Blog</p>
         </footer>
-        <script src="/admin.js" defer></script>
+        <script src="/admin/admin.js" defer></script>
       </body>
     </html>
   );

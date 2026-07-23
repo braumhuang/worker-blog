@@ -1,0 +1,120 @@
+name: Deploy Worker
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Validate deployment settings
+        env:
+          WORKER_NAME: ${{ vars.WORKER_NAME }}
+          MAX_UPLOAD_MB: ${{ vars.MAX_UPLOAD_MB }}
+          D1_NAME: ${{ vars.D1_NAME }}
+          D1_ID: ${{ vars.D1_ID }}
+          R2_NAME: ${{ vars.R2_NAME }}
+          CF_TOKEN: ${{ secrets.CF_TOKEN }}
+          ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
+          ADMIN_PSWD: ${{ secrets.ADMIN_PSWD }}
+        run: |
+          set -eu
+          : "${WORKER_NAME:?Missing repository variable WORKER_NAME}"
+          : "${MAX_UPLOAD_MB:?Missing repository variable MAX_UPLOAD_MB}"
+          : "${D1_NAME:?Missing repository variable D1_NAME}"
+          : "${D1_ID:?Missing repository variable D1_ID}"
+          : "${R2_NAME:?Missing repository variable R2_NAME}"
+          : "${CF_TOKEN:?Missing repository secret CF_TOKEN}"
+          : "${ADMIN_NAME:?Missing repository secret ADMIN_NAME}"
+          : "${ADMIN_PSWD:?Missing repository secret ADMIN_PSWD}"
+
+      - name: Create wrangler.toml
+        env:
+          WORKER_NAME: ${{ vars.WORKER_NAME }}
+          WORKER_DOMAIN: ${{ vars.WORKER_DOMAIN }}
+          MAX_UPLOAD_MB: ${{ vars.MAX_UPLOAD_MB }}
+          D1_NAME: ${{ vars.D1_NAME }}
+          D1_ID: ${{ vars.D1_ID }}
+          R2_NAME: ${{ vars.R2_NAME }}
+        run: |
+          set -eu
+
+          cat > wrangler.toml <<EOF
+          name = "${WORKER_NAME}"
+          main = "src/index.tsx"
+          compatibility_date = "2026-07-17"
+          EOF
+
+          if [ -n "${WORKER_DOMAIN:-}" ]; then
+            cat >> wrangler.toml <<EOF
+          workers_dev = false
+          preview_urls = false
+
+          [[routes]]
+          pattern = "${WORKER_DOMAIN}"
+          custom_domain = true
+          EOF
+          else
+            cat >> wrangler.toml <<EOF
+          workers_dev = true
+          preview_urls = true
+          EOF
+          fi
+
+          cat >> wrangler.toml <<EOF
+
+          [assets]
+          directory = "./static"
+
+          [[d1_databases]]
+          binding = "BLOG_DB"
+          database_name = "${D1_NAME}"
+          database_id = "${D1_ID}"
+
+          [[r2_buckets]]
+          binding = "BLOG_R2"
+          bucket_name = "${R2_NAME}"
+
+          [vars]
+          MAX_UPLOAD_MB = "${MAX_UPLOAD_MB}"
+          EOF
+
+          cat wrangler.toml
+
+      - name: Initialize D1 schema
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_TOKEN }}
+          command: d1 execute ${{ vars.D1_NAME }} --remote --file=./schema.sql
+
+      - name: Deploy Worker and set secrets
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_TOKEN }}
+          secrets: |
+            ADMIN_NAME
+            ADMIN_PSWD
+          command: deploy
+        env:
+          ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
+          ADMIN_PSWD: ${{ secrets.ADMIN_PSWD }}

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 import type { AppEnv, BlogMeta } from "./types";
-import { Base } from "./views/public/base";
+import { getThemeComponents } from "./views/themes/theme";
 import { renderFaviconSvg } from "./lib/favicon";
 import { getOptions } from "./lib/options";
 import { dbAll } from "./lib/db";
@@ -104,6 +104,7 @@ app.notFound(async (c) => {
   if (c.req.path.startsWith("/admin")) return c.text("Not Found", 404);
   try {
     const options = await getOptions(c.env.BLOG_DB);
+    const { Base, NotFound } = getThemeComponents(options.site_theme);
     const categories = navigationItemsFromOptions(options).some(
       (item) => item.id === "categories" && item.visible,
     )
@@ -114,14 +115,7 @@ app.notFound(async (c) => {
       : [];
     return c.html(
       <Base options={options} title="页面不存在" categories={categories}>
-        <section class="error-page">
-          <strong>404</strong>
-          <h1>页面不存在</h1>
-          <p>你访问的内容可能已被移动或删除。</p>
-          <a class="tag-pill" href="/">
-            返回首页
-          </a>
-        </section>
+        <NotFound />
       </Base>,
       404,
     );

@@ -69,6 +69,7 @@ import { CommentsPage, type AdminCommentRow } from "../views/admin/comments";
 import { CommentEditPage } from "../views/admin/comment";
 import { LinksPage } from "../views/admin/links";
 import { OptionsPage } from "../views/admin/options";
+import { normalizeThemeName } from "../theme";
 
 export const adminRoutes = new Hono<AppEnv>();
 
@@ -1111,6 +1112,7 @@ adminRoutes.get("/admin/options", async (c) => {
 adminRoutes.post("/admin/options", async (c) => {
   const form = await c.req.formData();
   const keys = [
+    "site_theme",
     "site_title",
     "site_description",
     "posts_per_page",
@@ -1135,6 +1137,7 @@ adminRoutes.post("/admin/options", async (c) => {
   const values: OptionMap = Object.fromEntries(
     keys.map((key) => [key, String(form.get(key) ?? "")]),
   );
+  values.site_theme = normalizeThemeName(values.site_theme);
   values.comments_enabled =
     form.get("comments_enabled") === "true" ? "true" : "false";
   values.posts_per_page = String(positiveInt(values.posts_per_page, 10, 100));

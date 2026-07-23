@@ -8659,6 +8659,7 @@ INSERT INTO blog_links(id,name,url,icon,info,"order") VALUES
 (6,'Winston','https://winston.ink/','','示例站点',10);
 
 INSERT INTO blog_options("key",value) VALUES
+('site_theme','kehua'),
 ('site_title','Worker Blog'),
 ('site_description','Stay Young, Stay Simple.'),
 ('posts_per_page','10'),

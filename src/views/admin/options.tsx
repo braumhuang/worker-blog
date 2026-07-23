@@ -1,5 +1,6 @@
 import type { OptionMap } from "../../types";
 import { TIMEZONE_OPTIONS } from "../../lib/options";
+import { THEME_OPTIONS } from "../../theme";
 import { AdminLayout } from "./base";
 
 export function OptionsPage({
@@ -20,6 +21,16 @@ export function OptionsPage({
       <section class="panel">
         <div class="panel-body">
           <form method="post" action="/admin/options" class="main-form">
+            <div class="field">
+              <label for="site_theme">站点主题</label>
+              <select class="select" id="site_theme" name="site_theme">
+                {THEME_OPTIONS.map(([value, label]) => (
+                  <option value={value} selected={options.site_theme === value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div class="field">
               <label>站点标题</label>
               <input

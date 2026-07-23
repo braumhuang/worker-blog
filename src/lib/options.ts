@@ -6,6 +6,7 @@ import {
   putCachedOptions,
 } from "./cache";
 import { normalizeFaviconColor, normalizeFaviconText } from "./favicon";
+import { DEFAULT_THEME, normalizeThemeName } from "../theme";
 import {
   DEFAULT_NAVIGATION_ITEMS,
   serializeNavigationItems,
@@ -77,6 +78,7 @@ export function normalizeFileCdnUrl(value: string): string {
 }
 
 export const DEFAULT_OPTIONS: OptionMap = {
+  site_theme: DEFAULT_THEME,
   site_title: "My Hono Blog",
   site_description: "Stay Young, Stay Simple.",
   posts_per_page: "10",
@@ -105,16 +107,9 @@ export const DEFAULT_OPTIONS: OptionMap = {
   about_email: "",
 };
 
-export async function getOptions(db: D1Database): Promise<OptionMap> {
-  const cached = await getCachedOptions();
-  if (cached) return cached;
-
-  const rows = await dbAll<{ key: string; value: string }>(
-    db,
-    'SELECT "key" AS key, value FROM blog_options',
-  );
-  const stored = Object.fromEntries(rows.map((row) => [row.key, row.value]));
+function normalizeOptions(stored: OptionMap): OptionMap {
   const options = Object.assign({}, DEFAULT_OPTIONS, stored);
+  options.site_theme = normalizeThemeName(options.site_theme);
   options.favicon_color = normalizeFaviconColor(options.favicon_color);
   options.favicon_text = normalizeFaviconText(
     options.favicon_text,
@@ -125,8 +120,26 @@ export async function getOptions(db: D1Database): Promise<OptionMap> {
   options.comments_enabled =
     options.comments_enabled === "true" ? "true" : "false";
   options.file_cdn_url = normalizeFileCdnUrl(options.file_cdn_url);
-  await putCachedOptions(options);
   return options;
+}
+
+export async function getOptions(db: D1Database): Promise<OptionMap> {
+  const cached = await getCachedOptions();
+  if (cached) return normalizeOptions(cached);
+
+  try {
+    const rows = await dbAll<{ key: string; value: string }>(
+      db,
+      'SELECT "key" AS key, value FROM blog_options',
+    );
+    const stored = Object.fromEntries(rows.map((row) => [row.key, row.value]));
+    const options = normalizeOptions(stored);
+    await putCachedOptions(options);
+    return options;
+  } catch (error) {
+    console.error("读取站点设置失败，使用默认设置。", error);
+    return normalizeOptions({});
+  }
 }
 
 export async function saveOptions(

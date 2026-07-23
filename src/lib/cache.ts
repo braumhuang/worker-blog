@@ -71,7 +71,8 @@ export async function getCachedOptions(): Promise<OptionMap | null> {
     Array.isArray(value) ||
     !Object.values(value).every((item) => typeof item === "string")
   ) {
-    if (value !== null) await cache.delete(OPTIONS_CACHE_KEY).catch(() => false);
+    if (value !== null)
+      await cache.delete(OPTIONS_CACHE_KEY).catch(() => false);
     return null;
   }
   return value as OptionMap;

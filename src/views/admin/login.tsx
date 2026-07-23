@@ -12,7 +12,7 @@ export function LoginPage({
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>登录 · 博客后台</title>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="stylesheet" href="/admin.css" />
+        <link rel="stylesheet" href="/admin/admin.css" />
       </head>
       <body class="login-page">
         <section class="login-box">
