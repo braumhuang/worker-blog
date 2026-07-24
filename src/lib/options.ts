@@ -79,7 +79,7 @@ export function normalizeFileCdnUrl(value: string): string {
 
 export const DEFAULT_OPTIONS: OptionMap = {
   site_theme: DEFAULT_THEME,
-  site_title: "My Hono Blog",
+  site_title: "Worker Blog",
   site_description: "Stay Young, Stay Simple.",
   posts_per_page: "10",
   memos_per_page: "20",

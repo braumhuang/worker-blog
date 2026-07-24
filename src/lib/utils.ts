@@ -151,11 +151,22 @@ export function stripMarkdown(markdown: string): string {
     .trim();
 }
 
+function truncateExcerpt(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit).trim()}…`;
+}
+
 export function excerptOf(text: string, limit = 200): string {
+  const moreMatch = /<!--\s*more\s*-->/i.exec(text);
+  if (moreMatch) {
+    return stripMarkdown(text.slice(0, moreMatch.index));
+  }
+  return truncateExcerpt(stripMarkdown(text), limit);
+}
+
+export function limitedExcerptOf(text: string, limit = 200): string {
   const beforeMore = text.split(/<!--\s*more\s*-->/i)[0];
-  const clean = stripMarkdown(beforeMore);
-  if (clean.length <= limit) return clean;
-  return `${clean.slice(0, limit).trim()}…`;
+  return truncateExcerpt(stripMarkdown(beforeMore), limit);
 }
 
 export function readingMinutes(text: string): number {

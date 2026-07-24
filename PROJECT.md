@@ -116,7 +116,7 @@ released <= 当前 Unix 时间
 
 ### Atom
 
-`/atom.xml` 返回最新 20 篇公开文章。Markdown 渲染为 HTML 后，会把相对的 `src`、`href` 和 `poster` 地址转换为绝对地址。
+`/atom.xml` 返回最新 20 篇公开文章。每个条目只输出与前台文章列表一致的纯文本摘要，存在 `<!-- more -->` 时完整使用标记前内容；不存在时截取前 200 个字符，不包含文章全文。
 
 ## 后台路由
 
@@ -259,7 +259,7 @@ Key/Value 设置表，保存站点信息、主题、分页、导航、附件模�
 
 ```text
 site_theme                  kehua
-site_title                  My Hono Blog
+site_title                  Worker Blog
 site_description            Stay Young, Stay Simple.
 posts_per_page              10
 memos_per_page              20
