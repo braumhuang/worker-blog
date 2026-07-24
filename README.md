@@ -14,7 +14,7 @@
 - 友链管理
 - R2 附件上传、文章附件关联和附件模板
 - JSON 数据导入、导出
-- Kehua、Writecho、Printer、Vermillion 四套前台主题
+- Kehua、Writecho、Printer、Vermillion、Simplecho 五套前台主题
 - 后台登录会话和站点设置缓存
 - GitHub Actions 手动一键部署
 
@@ -59,7 +59,8 @@ src/
         ├── kehua/
         ├── writecho/
         ├── printer/
-        └── vermillion/
+        ├── vermillion/
+        └── simplecho/
 static/
 ├── admin/
 │   ├── admin.css
@@ -67,7 +68,8 @@ static/
 ├── kehua/
 ├── writecho/
 ├── printer/
-└── vermillion/
+├── vermillion/
+└── simplecho/
 schema.sql                         当前完整数据库结构
 seed.sql                           本地开发模拟数据
 wrangler.toml                      本地运行和手动部署配置
@@ -84,6 +86,7 @@ export const THEME_NAMES = {
   writecho: "Writecho",
   printer: "Printer",
   vermillion: "Vermillion",
+  simplecho: "Simplecho",
 } as const;
 ```
 
@@ -95,6 +98,7 @@ export const THEME_NAMES = {
 - `writecho`：文艺杂志式博客排版。
 - `printer`：打字机与纸张风格。
 - `vermillion`：朱砂宣纸期刊风格，包含罗马数字侧栏、标签墙、卷首、朱印、明暗模式、搜索、文章目录、阅读进度和闪念热力图。
+- `simplecho`：极简卡片博客风格，使用 1000px 居中容器、左文右图文章卡、`# 分类 # 标签` 元信息、四套读者配色、自动深色、搜索、阅读进度和 `STAY VIBRANT` 页脚。
 
 ### JSX 组件目录
 
@@ -138,6 +142,7 @@ static/<theme>/
 /kehua/public.css
 /writecho/public.js
 /printer/images/default-cover.svg
+/simplecho/public.css
 ```
 
 ### 新增主题

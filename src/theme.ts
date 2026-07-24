@@ -3,6 +3,7 @@ export const THEME_NAMES = {
   writecho: "Writecho",
   printer: "Printer",
   vermillion: "Vermillion",
+  simplecho: "Simplecho",
 } as const;
 
 export type ThemeName = keyof typeof THEME_NAMES;

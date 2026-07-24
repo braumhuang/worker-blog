@@ -342,9 +342,12 @@ kehua    Kehua
 writecho Writecho
 printer  Printer
 vermillion Vermillion
+simplecho Simplecho
 ```
 
 `vermillion` 使用独立的 `src/views/themes/vermillion/` 组件目录与 `static/vermillion/` 静态资源目录。其页面结构以宣纸期刊为核心，左侧 rail 同时承载导航、标签和社交入口；首页包含卷首、朱砂印章和分栏文章卡；文章页包含目录、阅读进度、代码复制与回到顶部；闪念页使用服务端生成的年度活动热力图。
+
+`simplecho` 使用 `src/views/themes/simplecho/` 与 `static/simplecho/`。主题采用 1000px 居中容器、左文右图文章卡和 `# 分类 # 标签` 元信息，提供银光灰、简约白、墨草绿、暗夜黑四套配色；前台 JavaScript 负责配色持久化、自动深色、移动导航、搜索、阅读进度、代码复制、评论异步提交和返回顶部。归档、分类、标签、友链、闪念、关于、评论和 404 均使用同一视觉体系。
 
 主题选择过程：
 
