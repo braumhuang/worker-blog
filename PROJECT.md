@@ -2,136 +2,586 @@
 
 ## 项目定位
 
-`worker-blog` 是一个面向 Cloudflare 平台的服务端渲染博客系统。应用代码、前后台页面和主题组件使用 TypeScript 与 Hono JSX；D1 保存结构化数据；R2 保存上传文件；静态主题资源由 Workers Static Assets 发布。
+`worker-blog` 是一个部署在 Cloudflare Workers 上的服务端渲染博客系统。前台主题和后台页面使用 Hono JSX；D1 保存内容与配置；R2 保存上传文件；Workers Static Assets 发布 CSS、JavaScript 和主题图片；Workers Cache API 用于减少设置和会话读取。
 
-项目当前采用完整 `schema.sql` 管理数据库结构，不维护 migrations。
+项目当前处于初始开发阶段，数据库结构由完整的 `schema.sql` 管理，不维护 migrations。
 
-## 运行时绑定
+## 运行时组成
 
 ```text
-BLOG_DB        Cloudflare D1
-BLOG_R2        Cloudflare R2
-ADMIN_NAME     Worker Secret
-ADMIN_PSWD     Worker Secret
-MAX_UPLOAD_MB  普通环境变量
+浏览器
+├── 静态资源请求 ─────────────→ Workers Static Assets
+├── 前台动态页面 ─────────────→ Hono → D1
+├── 后台管理请求 ─────────────→ Hono → sessions_cache / D1
+├── /uploads/* ───────────────→ Hono → R2
+└── CDN 文件地址 ─────────────→ R2 公共域名或外部 CDN
 ```
+
+## Cloudflare 绑定和环境变量
+
+```text
+BLOG_DB        D1Database，业务数据库
+BLOG_R2        R2Bucket，上传文件存储
+ADMIN_NAME     Worker Secret，后台用户名
+ADMIN_PSWD     Worker Secret，后台密码
+MAX_UPLOAD_MB  普通变量，后台单文件上传限制
+```
+
+`MAX_UPLOAD_MB` 默认按 25 MB 处理，代码将可配置值限制在 1–100 MB。
 
 ## 核心目录
 
 ```text
-.github/workflows/deploy.yml   手动触发的生产部署工作流
-src/index.tsx                  Hono 应用入口、R2 文件读取、404 与错误处理
-src/routes/public.tsx          前台路由和数据查询
-src/routes/admin.tsx           后台路由、上传、导入导出和管理操作
-src/theme.ts                   主题名称映射、默认主题、资源路径
-src/lib/                       数据库、缓存、认证、设置、导航、Markdown 等
+.github/workflows/deploy.yml   GitHub Actions 手动部署工作流
+src/index.tsx                  Hono 应用入口、全局安全头、Favicon、R2 代理
+src/routes/public.tsx          前台路由、公开内容查询、评论和 Atom
+src/routes/admin.tsx           后台路由、CRUD、上传、导入导出
+src/theme.ts                   主题名称、默认主题和静态资源路径
+src/types.ts                   运行时绑定与业务类型
+src/lib/                       数据库、认证、缓存、设置、导航等公共逻辑
 src/views/admin/               后台 JSX 页面
-src/views/themes/theme.ts      主题组件注册表
+src/views/themes/theme.ts      前台主题组件注册表
 src/views/themes/<theme>/      各主题 JSX 组件
-static/admin/                  后台 CSS 与 JavaScript
-static/<theme>/                主题 CSS、JavaScript 与图片
-schema.sql                     当前数据库结构
-seed.sql                       本地开发模拟数据
+static/admin/                  后台 CSS、JavaScript
+static/<theme>/                主题 CSS、JavaScript、图片
+schema.sql                     当前完整数据库结构
+seed.sql                       开发模拟数据
+wrangler.toml                  本地和手动部署配置
 ```
 
-## 前台主题系统
+## 应用入口
 
-### 主题选择
+`src/index.tsx` 完成以下工作：
 
-1. `getOptions()` 从 `options_cache` 或 D1 读取设置。
-2. `site_theme` 交给 `normalizeThemeName()` 校验。
+1. 创建 `Hono<AppEnv>` 应用。
+2. 为全部响应添加安全头。
+3. 提供 `/favicon.svg` 动态 Favicon。
+4. 提供 `/uploads/*` R2 文件代理，并处理 HTTP Range 请求。
+5. 注册后台和前台路由。
+6. 根据当前主题渲染前台 404 页面。
+7. 区分前台和后台的错误响应。
+
+`/uploads/*` 返回 R2 对象的 HTTP 元数据、ETag、Range 和长期缓存头。数据库中的相对路径不包含 `/uploads`。
+
+## 前台路由
+
+```text
+GET  /                         文章首页
+GET  /post/:slug/             文章或页面详情
+POST /post/:slug/comments     提交评论
+GET  /memos/                  闪念列表和年度热力图
+GET  /archives/               归档
+GET  /categories/             分类列表
+GET  /category/:slug/         分类文章列表
+GET  /tags/                   标签列表
+GET  /tag/:slug/              标签文章列表
+GET  /links/                  友链
+GET  /api/search              搜索 API
+GET  /atom.xml                Atom Feed
+```
+
+无末尾斜杠的主要前台路径使用 308 跳转到规范地址。
+
+### 内容公开规则
+
+文章、页面和闪念只有同时满足以下条件才可公开读取：
+
+```text
+status = publish
+released <= 当前 Unix 时间
+```
+
+- 首页、归档、分类、标签和 Atom 只读取 `post`。
+- `page` 通过 `/post/:slug/` 访问。
+- `memo` 只进入闪念页和搜索。
+- 文章和页面都可以显示评论。
+
+列表默认按 `released DESC` 排序。`created` 是创建时间，编辑操作只更新 `modified`，`released` 由管理员控制。
+
+### 文章和元数据
+
+列表查询先取得当前页内容，再由 `enrichContents()` 一次查询当前页全部内容的分类和标签，避免逐篇查询。
+
+分类、标签详情复用主题的文章列表组件，分页数使用 `posts_per_page`。
+
+### 搜索
+
+`/api/search?q=` 搜索：
+
+- 标题；
+- Markdown 正文；
+- 分类和标签名称。
+
+搜索范围包括已经公开的 `post`、`page`、`memo`，最多返回 12 条。
+
+### Atom
+
+`/atom.xml` 返回最新 20 篇公开文章。Markdown 渲染为 HTML 后，会把相对的 `src`、`href` 和 `poster` 地址转换为绝对地址。
+
+## 后台路由
+
+后台登录地址：
+
+```text
+/admin/login
+```
+
+主要管理路由：
+
+```text
+/admin                         面板
+/admin/navigation              前台导航
+/admin/contents                文章、页面和闪念列表
+/admin/content/new             新建文章或闪念草稿
+/admin/content/:cid            内容编辑
+/admin/comments                评论列表
+/admin/comment/:id             评论编辑
+/admin/metas                   分类和标签
+/admin/attachments             附件列表
+/admin/attachment-templates    附件模板
+/admin/links                   友链
+/admin/options                 设置和数据管理
+```
+
+写操作经过后台会话验证和同源校验。
+
+## 后台内容编辑
+
+### 文章和页面
+
+文章编辑页支持：
+
+- 类型：文章或页面；
+- 状态：发布、草稿、隐藏；
+- 标题；
+- URL 别名；
+- 封面；
+- Markdown 正文；
+- 分类；
+- 标签；
+- 发布时间；
+- Markdown 预览；
+- 当前内容附件。
+
+### 闪念
+
+闪念使用 `type = memo`：
+
+- 隐藏标题、Slug、分类和封面；
+- 标题根据发布时间自动生成；
+- 支持标签；
+- 前台没有独立详情页。
+
+### 草稿和附件关联
+
+打开新建内容页时会先创建草稿并取得 CID。之后从编辑页上传的普通附件和封面均使用：
+
+```text
+blog_contents.parent = 当前内容 CID
+```
+
+独立附件、头像和友链图标等没有所属内容的文件使用 `parent = 0`。
+
+删除文章、页面或闪念时，同时删除其子附件记录和 R2 对象。
+
+## 数据模型
+
+### blog_contents
+
+统一保存内容和附件：
+
+```text
+post  文章
+page  页面
+memo  闪念
+atta  附件
+```
+
+主要字段：
+
+```text
+cid       自增主键
+parent    附件所属内容 CID，普通内容为 0
+created   创建时间
+modified  最后修改时间
+released  发布时间
+cover     封面相对路径或外部 URL
+type      内容类型
+status    publish / draft / hidden
+```
+
+约束和索引：
+
+- 同一 `type` 下 `slug` 唯一；
+- `post` 和 `page` 的公开 Slug 全局唯一；
+- 按类型、状态、发布时间建立查询索引；
+- 按类型、父 CID、创建时间建立附件索引。
+
+### blog_metas
+
+保存 `category` 和 `tag`。`count` 通过 `blog_relationships` 的插入、删除触发器维护。
+
+### blog_relationships
+
+内容和分类、标签的多对多关系，联合主键为 `(cid, mid)`，外键使用级联删除。
+
+### blog_comments
+
+评论字段：
+
+```text
+id
+name
+email
+site
+text
+created
+cid
+```
+
+`cid` 关联文章或页面，内容删除时评论级联删除。
+
+### blog_links
+
+保存名称、URL、图标、描述和次序。列表按 `order DESC, id DESC` 排序。
+
+### blog_options
+
+Key/Value 设置表，保存站点信息、主题、分页、导航、附件模板和关于页资料。
+
+### blog_cookies
+
+保存后台会话令牌及过期时间。
+
+## 默认设置
+
+`src/lib/options.ts` 中的默认值：
+
+```text
+site_theme                  kehua
+site_title                  My Hono Blog
+site_description            Stay Young, Stay Simple.
+posts_per_page              10
+memos_per_page              20
+archives_per_page           50
+comments_per_page           20
+admin_contents_per_page     25
+admin_memos_per_page        25
+admin_comments_per_page     20
+admin_attachments_per_page  30
+comments_enabled            false
+file_cdn_url                空
+site_timezone               Asia/Shanghai
+favicon_text                B
+favicon_color               #999999
+```
+
+还包括：
+
+```text
+footer_info
+about_avatar
+about_github
+about_x
+about_rss
+about_email
+navigation_menu
+attachment_templates
+```
+
+设置读取失败时使用规范化后的默认值。
+
+## 导航系统
+
+导航配置以 JSON 保存在：
+
+```text
+blog_options.navigation_menu
+```
+
+### 自带菜单
+
+```text
+home
+memos
+archives
+categories
+tags
+links
+```
+
+自带菜单：
+
+- 不能删除；
+- URL 固定；
+- 菜单名和次序可修改；
+- 首页不能隐藏；
+- 其他菜单可以隐藏。
+
+### 新增菜单
+
+新增菜单支持：
+
+- 菜单名；
+- URL；
+- 是否显示；
+- 次序；
+- `page` 或 `about` 模板；
+- 删除。
+
+默认新增菜单为“关于”，指向 `/post/about`，使用 `about` 模板。
+
+两个分组分别按次序升序排序；次序相同时按菜单名排序。前台可见菜单超过 8 个时，第 8 个起进入“更多”菜单。
+
+## 主题系统
+
+主题文件夹名与显示名：
+
+```text
+kehua    Kehua
+writecho Writecho
+printer  Printer
+```
+
+主题选择过程：
+
+1. `getOptions()` 从 `options_cache` 或 D1 取得设置。
+2. `normalizeThemeName()` 校验 `site_theme`。
 3. 缺失、无效或数据库读取失败时回退到 `kehua`。
-4. `getThemeComponents()` 从 `src/views/themes/theme.ts` 取得对应 JSX 组件集合。
-5. 主题 `Base` 通过 `themeAssetPath()` 加载 `static/<theme>/` 下的资源。
+4. `getThemeComponents()` 返回相应的组件集合。
+5. 主题 `Base` 使用 `themeAssetPath()` 加载主题静态资源。
 
-### 主题组件约定
+### 主题组件契约
 
 每个主题必须提供：
 
 ```text
-404
-about
-archives
-base
-categories
-category
-index
-links
-memos
-page
-post
-tag
-tags
-partials/comments
-partials/footer
-partials/header
-partials/pagination
-partials/post-card
+NotFound
+About
+Archives
+Base
+Categories
+Category
+Comments
+Index
+Links
+Memos
+Page
+Post
+Tag
+Tags
 ```
 
-`theme.ts` 中的三个主题对象必须保持相同组件键，使路由层不依赖具体主题实现。
+主题目录还包含 `partials/header`、`footer`、`pagination`、`post-card`，供主题内部组合使用。
 
-### 新主题注册
+路由层只依赖统一的主题组件接口，不依赖具体主题实现。
 
-新增主题需要同时完成：
+## 静态资源
 
-1. 创建 `src/views/themes/<theme>/`。
-2. 创建 `static/<theme>/`。
-3. 在 `src/theme.ts` 的 `THEME_NAMES` 注册文件夹名与显示名。
-4. 在 `src/views/themes/theme.ts` 导入并注册组件。
-5. 确认主题 `Base` 使用传入的当前主题名生成资源路径。
-6. 通过 TypeScript 检查并测试所有前台路由。
+Workers Static Assets 根目录：
 
-## 后台资源
+```text
+static/
+```
 
-后台 JSX 位于 `src/views/admin/`，共享静态文件统一位于：
+后台资源：
 
 ```text
 static/admin/admin.css
 static/admin/admin.js
 ```
 
-页面引用路径为：
+主题资源：
+
+```text
+static/<theme>/public.css
+static/<theme>/public.js
+static/<theme>/images/*
+```
+
+页面 URL：
 
 ```text
 /admin/admin.css
 /admin/admin.js
+/<theme>/public.css
+/<theme>/public.js
 ```
 
-静态文件命中时由 Workers Static Assets 直接返回；其他 `/admin/*` 请求进入 Worker 路由。
+## 附件与 R2
 
-## 数据模型
+### 存储格式
 
-- `blog_contents`：`post`、`page`、`memo`、`atta`。
-- `blog_metas`：`category`、`tag`。
-- `blog_relationships`：内容和分类、标签的多对多关系。
-- `blog_comments`：文章和页面评论。
-- `blog_links`：友链。
-- `blog_options`：站点、主题、导航、分页、附件模板等设置。
-- `blog_cookies`：后台登录会话。
+R2 对象 Key：
 
-附件使用 `blog_contents.parent` 关联所属文章、页面或闪念，文件元数据保存在附件记录的 `text` JSON 中。数据库只保存相对文件路径，公开地址在渲染时根据文件 CDN 设置生成。
+```text
+年/月/UUID.扩展名
+```
+
+附件 JSON 保存在 `blog_contents.text`：
+
+```json
+{
+  "key": "2026/07/UUID.png",
+  "url": "/2026/07/UUID.png",
+  "mime": "image/png",
+  "size": 12345,
+  "originalName": "image.png"
+}
+```
+
+数据库保存相对路径，不保存站点域名或 CDN 域名。
+
+### 公开 URL
+
+未配置文件 CDN：
+
+```text
+/uploads + 相对路径
+```
+
+配置文件 CDN：
+
+```text
+file_cdn_url + 相对路径
+```
+
+`resolveUploadedUrls()` 在渲染 Markdown、封面和附件内容时统一解析相对路径。
+
+### 上传接口
+
+```text
+POST /admin/api/attachments
+DELETE /admin/api/attachments/:cid
+```
+
+上传时：
+
+1. 校验文件和大小；
+2. 校验父内容是否存在；
+3. 使用当前年月和 UUID 生成 Key；
+4. 写入 R2；
+5. 插入 `type = atta` 的内容记录；
+6. 返回附件信息和默认插入文本。
+
+### 附件模板
+
+模板以 JSON 保存在：
+
+```text
+blog_options.attachment_templates
+```
+
+默认模板：
+
+```text
+图片  ![FILE_NAME](RELATIVE_PATH)
+视频  <video controls preload="metadata" src="RELATIVE_PATH">FILE_NAME</video>
+文件  [FILE_NAME](RELATIVE_PATH)
+```
+
+插入时替换：
+
+```text
+FILE_NAME
+RELATIVE_PATH
+```
+
+## 评论
+
+`comments_enabled = true` 时，文章和页面详情显示评论表单和列表。
+
+评论分页使用 `comments_per_page`。提交成功或评论翻页时，前端 JavaScript 更新评论区域，避免跳回页面顶部。
+
+后台支持评论列表、按内容筛选、编辑和删除。
+
+## 认证与安全
+
+- 后台账号从 Worker Secrets 读取。
+- 凭据使用常量时间比较。
+- 会话 Cookie 名为 `blog_session`。
+- Cookie 使用 `HttpOnly`、`SameSite=Lax`，HTTPS 下启用 `Secure`。
+- 后台写操作进行 Origin 或 Referer 同源校验。
+- 会话默认有效 10 天，剩余 2 天时续期。
+- 登录时异步清理过期会话。
 
 ## 缓存
 
-### `options_cache`
+### options_cache
 
-缓存规范化后的站点设置，减少前后台公共页面重复读取 `blog_options`。保存设置、导航、附件模板或导入数据后清理缓存。
+- Cache 名称：`options_cache`；
+- Key：固定内部 URL；
+- 最长缓存 5 分钟；
+- 缓存规范化后的全部站点设置；
+- 保存设置、导航、附件模板或导入数据后删除。
 
-### `sessions_cache`
+### sessions_cache
 
-以登录令牌摘要为缓存键保存后台会话结果，减少每次后台请求对 `blog_cookies` 的读取。登录、续期、退出和过期时同步更新。
+- Cache 名称：`sessions_cache`；
+- 使用令牌 SHA-256 摘要构造缓存 Key；
+- 最长缓存 5 分钟；
+- TTL 不超过会话剩余有效期；
+- 登录、续期、退出和过期时同步更新。
 
-Cache API 不可用、缓存无效或缓存未命中时均回退到 D1。
+Cache API 异常时不影响功能，读取会回退到 D1。
 
-## 静态资源与附件
+## 数据导入和导出
 
-`wrangler.toml` 的 `[assets]` 指向 `./static`。主题静态资源和后台资源不经过应用路由即可返回；动态页面在没有同名静态文件时进入 Worker。
+导出版本：
 
-R2 绑定名固定为 `BLOG_R2`。上传记录保存 `/年/月/UUID.扩展名` 形式的相对路径：
+```text
+1
+```
 
-- 未配置文件 CDN：`/uploads` + 相对路径。
-- 已配置文件 CDN：CDN 域名 + 相对路径。
+导出表：
+
+```text
+blog_contents
+blog_metas
+blog_relationships
+blog_options
+blog_links
+blog_comments
+```
+
+不导出：
+
+```text
+blog_cookies
+R2 文件本体
+```
+
+导入只接受当前版本和当前字段集合：
+
+- 自增表保留原主键直接 INSERT；
+- 非自增表使用 `ON CONFLICT` 更新或插入；
+- 导入冲突返回 409；
+- 导入完成后清理设置缓存。
+
+## Schema 与 Seed
+
+### Schema
+
+`schema.sql` 使用 `CREATE TABLE IF NOT EXISTS`、索引和触发器定义完整数据库结构。
+
+项目不维护 migrations。现有数据库发生不兼容结构变化时，需要手动处理或重新创建。
+
+### Seed
+
+当前 `seed.sql` 包含：
+
+```text
+300 篇文章
+1 个页面
+90 条闪念
+600 条评论
+3 个分类
+10 个标签
+6 条友链
+24 项设置
+```
+
+Seed 只用于开发和演示，会先清理业务数据。
 
 ## GitHub Actions 部署
 
@@ -147,6 +597,8 @@ ADMIN_PSWD
 
 ### Variables
 
+工作流使用以下 Variables 生成 `wrangler.toml` 并初始化远程 D1：
+
 ```text
 WORKER_NAME
 WORKER_DOMAIN       可选
@@ -156,22 +608,57 @@ D1_ID
 R2_NAME
 ```
 
-工作流流程：
+D1 绑定和远程 `schema.sql` 执行命令统一使用 `D1_NAME`。
 
-1. `npm ci`。
-2. `npm run typecheck`。
-3. 校验必需的 Secrets 和 Variables。
-4. 动态生成只用于当前 CI 任务的 `wrangler.toml`。
-5. 使用 `schema.sql` 初始化或补全远程 D1。
-6. 将 `ADMIN_NAME`、`ADMIN_PSWD` 写入 Worker Secrets。
-7. 部署 Worker、Static Assets，并绑定 D1 与 R2。
+### 当前工作流步骤
 
-`WORKER_DOMAIN` 为空时开启 `workers.dev` 和 Preview URL；配置后关闭二者并使用 Cloudflare Custom Domain。工作流不会自动执行 `seed.sql`。
+1. `actions/checkout@v4`；
+2. `actions/setup-node@v4`，Node.js 26；
+3. `npm install`；
+4. 动态生成 `wrangler.toml`；
+5. `wrangler-action@v3` 执行远程 `schema.sql`；
+6. `wrangler-action@v3` 设置后台 Secrets 并部署。
 
-## 开发与发布约束
+工作流当前不会自动执行：
 
-- 数据库结构变化直接修改 `schema.sql`。
-- 本地结构变化后删除 `.wrangler/` 并重新初始化。
-- `seed.sql` 仅用于开发模拟数据。
-- README 和 PROJECT 描述当前实现，不记录版本历史。
-- 发布前至少执行 TypeScript 检查、JavaScript 语法检查、SQLite Schema/Seed 检查和压缩包完整性检查。
+```text
+npm run typecheck
+seed.sql
+```
+
+`WORKER_DOMAIN` 为空时开启 `workers.dev` 和 Preview URL；配置后关闭两者并创建 Custom Domain。
+
+## 本地开发流程
+
+```bash
+npm install
+cp .dev.vars.example .dev.vars
+npm run db:schema:local
+npm run db:seed:local
+npm run typecheck
+npm run dev
+```
+
+数据库结构变化后：
+
+```bash
+rm -rf .wrangler
+npm run db:schema:local
+npm run db:seed:local
+```
+
+## 发布检查
+
+发布前至少检查：
+
+1. `npm run typecheck`；
+2. 前后台 JavaScript 语法；
+3. Schema 和 Seed 可完整执行；
+4. SQLite 完整性及外键；
+5. 前台全部主题路由；
+6. 后台登录、上传、评论和导入导出；
+7. GitHub Actions Variables、Secrets 和 D1 名称一致性。
+
+## 文档约定
+
+README 和 PROJECT 描述当前项目结构、运行方式和实现约束，不记录历史变迁。

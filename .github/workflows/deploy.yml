@@ -75,7 +75,7 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_TOKEN }}
-          command: d1 execute ${{ vars.DB_NAME }} --remote --file=schema.sql
+          command: d1 execute ${{ vars.D1_NAME }} --remote --file=schema.sql
 
       - name: Deploy Worker & Set Secrets
         uses: cloudflare/wrangler-action@v3
