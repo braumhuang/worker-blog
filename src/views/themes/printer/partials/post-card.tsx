@@ -16,7 +16,7 @@ export function PostCard({
           {post.title || "未命名文章"}
         </a>
       </h3>
-      <p class="post-excerpt">{excerptOf(post.text, 180)}</p>
+      <p class="post-excerpt">{excerptOf(post.text)}</p>
     </li>
   );
 }

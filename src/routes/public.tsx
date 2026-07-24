@@ -18,6 +18,7 @@ import {
 import { renderMarkdown } from "../lib/markdown";
 import {
   excerptOf,
+  limitedExcerptOf,
   isoDate,
   nowSeconds,
   positiveInt,
@@ -186,13 +187,6 @@ function escapeXml(value: string): string {
   );
 }
 
-function absoluteFeedHtml(html: string, origin: string): string {
-  return html.replace(
-    /(src|href|poster)=(['"])(\/(?!\/)[^'"<>]*)\2/g,
-    (_match, attr, quote, path) => `${attr}=${quote}${origin}${path}${quote}`,
-  );
-}
-
 publicRoutes.get("/atom.xml", async (c) => {
   const options = await getOptions(c.env.BLOG_DB);
   const now = nowSeconds();
@@ -210,14 +204,35 @@ publicRoutes.get("/atom.xml", async (c) => {
   const entries = posts
     .map((post) => {
       const url = `${origin}/post/${encodeURIComponent(post.slug)}/`;
-      const html = absoluteFeedHtml(
-        resolveUploadedUrls(renderMarkdown(post.text), options.file_cdn_url),
-        origin,
-      );
-      return `<entry><title>${escapeXml(post.title || "未命名文章")}</title><id>${escapeXml(url)}</id><link href="${escapeXml(url)}"/><updated>${new Date(Math.max(post.modified, post.released) * 1000).toISOString()}</updated><published>${new Date(post.released * 1000).toISOString()}</published><summary>${escapeXml(excerptOf(post.text, 240))}</summary><content type="html">${escapeXml(html)}</content></entry>`;
+      const excerpt = excerptOf(post.text);
+      return [
+        "  <entry>",
+        `    <title>${escapeXml(post.title || "未命名文章")}</title>`,
+        `    <id>${escapeXml(url)}</id>`,
+        `    <link href="${escapeXml(url)}"/>`,
+        `    <updated>${new Date(Math.max(post.modified, post.released) * 1000).toISOString()}</updated>`,
+        `    <published>${new Date(post.released * 1000).toISOString()}</published>`,
+        `    <summary type="text">${escapeXml(excerpt)}</summary>`,
+        "  </entry>",
+      ].join("\n");
     })
-    .join("");
-  const xml = `<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>${escapeXml(options.site_title)}</title><subtitle>${escapeXml(options.site_description)}</subtitle><id>${escapeXml(homeUrl)}</id><link href="${escapeXml(homeUrl)}"/><link href="${escapeXml(feedUrl)}" rel="self" type="application/atom+xml"/><updated>${new Date(updatedSeconds * 1000).toISOString()}</updated><author><name>${escapeXml(options.site_title)}</name></author>${entries}</feed>`;
+    .join("\n");
+  const feedLines = [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<feed xmlns="http://www.w3.org/2005/Atom">',
+    `  <title>${escapeXml(options.site_title)}</title>`,
+    `  <subtitle>${escapeXml(options.site_description)}</subtitle>`,
+    `  <id>${escapeXml(homeUrl)}</id>`,
+    `  <link href="${escapeXml(homeUrl)}"/>`,
+    `  <link href="${escapeXml(feedUrl)}" rel="self" type="application/atom+xml"/>`,
+    `  <updated>${new Date(updatedSeconds * 1000).toISOString()}</updated>`,
+    "  <author>",
+    `    <name>${escapeXml(options.site_title)}</name>`,
+    "  </author>",
+  ];
+  if (entries) feedLines.push(entries);
+  feedLines.push("</feed>");
+  const xml = `${feedLines.join("\n")}\n`;
   return c.body(xml, 200, {
     "Content-Type": "application/atom+xml; charset=utf-8",
     "Cache-Control": "public, max-age=300",
@@ -311,7 +326,7 @@ publicRoutes.get("/post/:slug/", async (c) => {
       options={options}
       title={content.title}
       active={navigationItem?.id}
-      description={excerptOf(content.text, 150)}
+      description={limitedExcerptOf(content.text, 150)}
       categories={await navigationCategories(c.env.BLOG_DB, options)}
     >
       {template === "about" ? (
@@ -600,7 +615,7 @@ publicRoutes.get("/api/search", async (c) => {
   return c.json({
     items: rows.map((row) => ({
       title: row.title,
-      excerpt: excerptOf(row.text, 90),
+      excerpt: limitedExcerptOf(row.text, 90),
       url:
         row.type === "memo"
           ? `/memos/#memo-${row.cid}`
