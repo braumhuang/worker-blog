@@ -1,4 +1,2 @@
-# 本地开发可覆盖 wrangler.toml 中的变量
 ADMIN_NAME=admin
 ADMIN_PSWD=12345678
-MAX_UPLOAD_MB=25
