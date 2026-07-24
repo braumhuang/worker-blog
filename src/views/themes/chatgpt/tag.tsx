@@ -1,3 +1,40 @@
 import type { BlogMeta, ContentWithMeta } from "../../../types";
 import { Answer, Pagination, PostCards, Question } from "./partials/shared";
-export function Tag({ meta, posts, total, page, totalPages, timeZone, fileCdnUrl }: { meta: BlogMeta; posts: ContentWithMeta[]; total: number; page: number; totalPages: number; timeZone: string; fileCdnUrl: string }) { const path=`/tag/${encodeURIComponent(meta.slug)}/`; return <><Question name={meta.name} variants={'「{name}」——关于它，你写过什么？\n聊聊「{name}」吧，我想听。'}>聊聊「{meta.name}」吧。</Question><Answer intro={`关于「${meta.name}」，我留下过 ${total} 篇思考：`}>{meta.description?<p class="cg-page-intro">{meta.description}</p>:null}<PostCards posts={posts} timeZone={timeZone} fileCdnUrl={fileCdnUrl}/><Pagination page={page} totalPages={totalPages} path={path}/></Answer></>; }
+export function Tag({
+  meta,
+  posts,
+  total,
+  page,
+  totalPages,
+  timeZone,
+  fileCdnUrl,
+}: {
+  meta: BlogMeta;
+  posts: ContentWithMeta[];
+  total: number;
+  page: number;
+  totalPages: number;
+  timeZone: string;
+  fileCdnUrl: string;
+}) {
+  const path = `/tag/${encodeURIComponent(meta.slug)}/`;
+  return (
+    <>
+      <Question
+        name={meta.name}
+        variants={
+          "「{name}」——关于它，你写过什么？\n聊聊「{name}」吧，我想听。"
+        }
+      >
+        聊聊「{meta.name}」吧。
+      </Question>
+      <Answer intro={`关于「${meta.name}」，我留下过 ${total} 篇思考：`}>
+        {meta.description ? (
+          <p class="cg-page-intro">{meta.description}</p>
+        ) : null}
+        <PostCards posts={posts} timeZone={timeZone} fileCdnUrl={fileCdnUrl} />
+        <Pagination page={page} totalPages={totalPages} path={path} />
+      </Answer>
+    </>
+  );
+}

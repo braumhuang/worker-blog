@@ -56,7 +56,6 @@ async function navigationCategories(
   );
 }
 
-
 async function themeSidebarTags(
   db: D1Database,
   options: OptionMap,
@@ -615,7 +614,7 @@ publicRoutes.get("/links/", async (c) => {
   return c.html(
     <Base
       options={options}
-      title="导航"
+      title="友链"
       active="links"
       categories={await navigationCategories(c.env.BLOG_DB, options)}
       tags={await themeSidebarTags(c.env.BLOG_DB, options)}

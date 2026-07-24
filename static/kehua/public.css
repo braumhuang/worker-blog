@@ -169,14 +169,6 @@ kbd {
   max-width: var(--container-wide);
 }
 
-.hor-player,
-.ver-player,
-.hor-image,
-.ver-image {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-}
-
 /* =========================================================
    4. 顶栏
    ========================================================= */
@@ -1889,14 +1881,6 @@ body.mobile-nav-open {
   margin-bottom: var(--spacing-xl);
 }
 
-.memo-item a {
-  color: var(--color-primary);
-}
-
-.memo-item a:hover {
-  text-decoration: underline;
-}
-
 .memo-item:last-child {
   margin-bottom: 0;
 }
@@ -2428,10 +2412,6 @@ body.mobile-nav-open {
   }
 }
 
-.link-card-body-name-only {
-  justify-content: center;
-}
-
 /* =========================================================
    Kehua source-theme refinement
    ========================================================= */
@@ -2468,10 +2448,6 @@ body.mobile-nav-open {
   height: auto;
 }
 
-.link-card-body-name-only {
-  justify-content: center;
-}
-
 @media (max-width: 768px) {
   .post-with-thumb {
     gap: var(--spacing-md);
@@ -2482,5 +2458,33 @@ body.mobile-nav-open {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+  }
+}
+
+/* ══════════ Worker Blog优化闪念显示 ══════════ */
+video {
+  width: 100%;
+}
+
+.memo-item a {
+  color: var(--color-primary);
+}
+
+.memo-item a:hover {
+  text-decoration: underline;
+}
+
+.hor-player,
+.ver-player,
+.hor-image,
+.ver-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+@media (max-width: 480px) {
+  .ver-player {
+    width: 100%;
+    aspect-ratio: 9 / 16;
   }
 }

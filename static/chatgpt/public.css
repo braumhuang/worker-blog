@@ -28,9 +28,12 @@
   --content-w: 56rem; /* 会被 head 内联样式按主题设置覆盖 */
   --radius-bubble: 1.5rem;
   --radius-card: 1rem;
-  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
     "JetBrains Mono", monospace;
 }
 
@@ -75,7 +78,9 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 body.no-scroll {
@@ -124,7 +129,9 @@ button {
   height: 36px;
   border-radius: 10px;
   color: var(--text-2);
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
   flex: none;
 }
 .icon-btn:hover {
@@ -629,7 +636,9 @@ html[data-theme="dark"] .composer {
   background: var(--text);
   color: var(--bg);
   flex: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 .composer__send:hover {
   opacity: 0.85;
@@ -809,7 +818,9 @@ html[data-theme="dark"] .composer {
   padding: 0.875rem 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .suggestion-card:hover {
   background: var(--hover);
@@ -859,7 +870,9 @@ html[data-theme="dark"] .composer {
     font-size: 0.8125rem;
     color: var(--text-2);
     white-space: nowrap;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
   }
   .suggestion-chip:active {
     background: var(--hover);
@@ -874,7 +887,9 @@ html[data-theme="dark"] .composer {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   overflow: hidden;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .featured-card:hover {
   background: var(--hover);
@@ -1036,7 +1051,9 @@ html[data-theme="dark"] .composer {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   overflow: hidden;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .post-card:hover {
   background: var(--hover);
@@ -1137,7 +1154,10 @@ html[data-theme="dark"] .composer {
   border-radius: 999px;
   font-size: 0.8125rem;
   color: var(--text-2);
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 .chip:hover {
   background: var(--hover);
@@ -1258,7 +1278,9 @@ html[data-theme="dark"] .composer {
   height: 32px;
   border-radius: 8px;
   color: var(--text-3);
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 .msg-action:hover {
   background: var(--hover);
@@ -1286,7 +1308,9 @@ html[data-theme="dark"] .composer {
   padding: 0.875rem 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .post-nav__card:hover {
   background: var(--hover);
@@ -1341,7 +1365,9 @@ html[data-theme="dark"] .composer {
   border-radius: 999px;
   font-size: 0.875rem;
   color: var(--text-2);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .pagination__btn:hover {
   background: var(--hover);
@@ -1374,7 +1400,9 @@ html[data-theme="dark"] .composer {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: 1.125rem 1.25rem 0.875rem 3.25rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 .memo-card:hover {
   border-color: var(--border-strong);
@@ -1583,7 +1611,9 @@ html[data-theme="dark"] .memo-card:hover {
   flex: none;
   opacity: 0;
   transform: translate(-3px, 3px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 .link-row:hover .link-row__arrow {
   opacity: 1;
@@ -1612,7 +1642,10 @@ html[data-theme="dark"] .memo-card:hover {
   border-radius: 999px;
   font-size: 0.875rem;
   color: var(--text-2);
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 .social-btn:hover {
   background: var(--hover);
@@ -1771,7 +1804,9 @@ html[data-theme="dark"] .memo-card:hover {
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 .search-hit:hover {
   background: var(--hover);
@@ -1988,7 +2023,9 @@ html[data-theme="dark"] .memo-card:hover {
   color: var(--text-3);
   padding: 0.1875rem 0.5rem;
   border-radius: 6px;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 .codeblock-copy:hover {
   background: var(--hover);
@@ -2231,5 +2268,262 @@ html[data-theme="dark"] .gt-container .gt-comment-date {
 }
 
 /* worker-blog integration */
-.cg-empty{padding:1rem 0;color:var(--text-3);font-size:.9rem}.cg-page-intro{color:var(--text-2);margin:.25rem 0 1.25rem}.cg-category-grid{display:flex;flex-wrap:wrap;gap:.5rem}.cg-comment-form{display:grid;gap:.75rem}.cg-comment-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.625rem}.cg-comment-form input,.cg-comment-form textarea{width:100%;border:1px solid var(--border);background:var(--bubble);color:var(--text);border-radius:.75rem;padding:.75rem .875rem;font:inherit;outline:none}.cg-comment-form textarea{min-height:7rem;resize:vertical}.cg-comment-form input:focus,.cg-comment-form textarea:focus{border-color:color-mix(in srgb,var(--accent) 65%,var(--border))}.cg-comment-actions{display:flex;justify-content:flex-end}.cg-comment-actions button{background:var(--accent);color:#fff;border-radius:.7rem;padding:.55rem 1rem;font-weight:600}.cg-comment-notice{padding:.65rem .8rem;margin-bottom:.8rem;border-radius:.7rem;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}.cg-comments-list{display:grid;gap:.75rem;margin-top:1rem}.cg-comment{display:flex;gap:.75rem;padding:1rem;border:1px solid var(--border);border-radius:var(--radius-card)}.cg-comment-avatar{display:grid;place-items:center;width:2rem;height:2rem;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;flex:none}.cg-comment-body{min-width:0;flex:1}.cg-comment-body header{display:flex;gap:.6rem;align-items:baseline}.cg-comment-body header time{font-size:.75rem;color:var(--text-3)}.cg-comment-body p{white-space:pre-wrap;margin:.35rem 0 0}.cg-comment-pagination{display:flex;justify-content:space-between;align-items:center;margin-top:1rem;font-size:.85rem}.cg-comment-pagination a{color:var(--accent)}.cg-comments-empty{padding:1rem;border:1px dashed var(--border);border-radius:var(--radius-card);text-align:center}.cg-about-card{display:flex;align-items:center;gap:1rem;padding:1rem;border:1px solid var(--border);border-radius:var(--radius-card);margin-bottom:1.5rem}.cg-about-avatar{width:3.25rem;height:3.25rem;border-radius:50%;object-fit:cover;background:var(--bubble);display:grid;place-items:center;font-weight:700}.cg-about-card h2,.cg-about-card p{margin:0}.cg-about-card p{color:var(--text-2);font-size:.875rem}.cg-social-row{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.65rem}.cg-social-row a{border:1px solid var(--border);border-radius:.65rem;padding:.35rem .65rem;font-size:.8rem}.cg-404{min-height:55vh;display:grid;place-items:center;text-align:center}.cg-404-num{font-size:clamp(5rem,18vw,10rem);font-weight:700;line-height:1;color:var(--text)}.cg-404 a{display:inline-flex;margin-top:1rem;padding:.65rem 1rem;border-radius:.75rem;background:var(--text);color:var(--bg)}.cg-memo-content p:first-child{margin-top:0}.cg-memo-content p:last-child{margin-bottom:0}.memo-card{scroll-margin-top:5rem}.cg-post-meta-links{display:flex;flex-wrap:wrap;gap:.4rem}.cg-page-content{padding-top:.25rem}.cg-link-name-only .link-row__meta{justify-content:center}.cg-link-name-only .link-row__desc{display:none}.cg-sidebar-copyright{font-size:.68rem;color:var(--text-3);padding:.35rem .625rem .1rem}.cg-sidebar-copyright a:hover{color:var(--text)}.cg-active-count{font-size:.75rem;color:var(--text-3);font-weight:400}.cg-inline-title{font-weight:600}.cg-scroll-anchor{scroll-margin-top:5rem}
-@media(max-width:700px){.cg-comment-fields{grid-template-columns:1fr}.cg-about-card{align-items:flex-start}.cg-comment{padding:.85rem}.cg-sidebar-copyright{display:none}}
+.cg-empty {
+  padding: 1rem 0;
+  color: var(--text-3);
+  font-size: 0.9rem;
+}
+.cg-page-intro {
+  color: var(--text-2);
+  margin: 0.25rem 0 1.25rem;
+}
+.cg-category-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.cg-comment-form {
+  display: grid;
+  gap: 0.75rem;
+}
+.cg-comment-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem;
+}
+.cg-comment-form input,
+.cg-comment-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--bubble);
+  color: var(--text);
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  font: inherit;
+  outline: none;
+}
+.cg-comment-form textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+.cg-comment-form input:focus,
+.cg-comment-form textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--border));
+}
+.cg-comment-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.cg-comment-actions button {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 0.7rem;
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+}
+.cg-comment-notice {
+  padding: 0.65rem 0.8rem;
+  margin-bottom: 0.8rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+.cg-comments-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.cg-comment {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.cg-comment-avatar {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  flex: none;
+}
+.cg-comment-body {
+  min-width: 0;
+  flex: 1;
+}
+.cg-comment-body header {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+}
+.cg-comment-body header time {
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+.cg-comment-body p {
+  white-space: pre-wrap;
+  margin: 0.35rem 0 0;
+}
+.cg-comment-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+.cg-comment-pagination a {
+  color: var(--accent);
+}
+.cg-comments-empty {
+  padding: 1rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+.cg-about-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  margin-bottom: 1.5rem;
+}
+.cg-about-avatar {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bubble);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.cg-about-card h2,
+.cg-about-card p {
+  margin: 0;
+}
+.cg-about-card p {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+.cg-social-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+.cg-social-row a {
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+}
+.cg-404 {
+  min-height: 55vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.cg-404-num {
+  font-size: clamp(5rem, 18vw, 10rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+}
+.cg-404 a {
+  display: inline-flex;
+  margin-top: 1rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--text);
+  color: var(--bg);
+}
+.cg-memo-content p:first-child {
+  margin-top: 0;
+}
+.cg-memo-content p:last-child {
+  margin-bottom: 0;
+}
+.memo-card {
+  scroll-margin-top: 5rem;
+}
+.cg-post-meta-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.cg-page-content {
+  padding-top: 0.25rem;
+}
+.cg-link-name-only .link-row__meta {
+  justify-content: center;
+}
+.cg-link-name-only .link-row__desc {
+  display: none;
+}
+.cg-sidebar-copyright {
+  font-size: 0.68rem;
+  color: var(--text-3);
+  padding: 0.35rem 0.625rem 0.1rem;
+}
+.cg-sidebar-copyright a:hover {
+  color: var(--text);
+}
+.cg-active-count {
+  font-size: 0.75rem;
+  color: var(--text-3);
+  font-weight: 400;
+}
+.cg-inline-title {
+  font-weight: 600;
+}
+.cg-scroll-anchor {
+  scroll-margin-top: 5rem;
+}
+@media (max-width: 700px) {
+  .cg-comment-fields {
+    grid-template-columns: 1fr;
+  }
+  .cg-about-card {
+    align-items: flex-start;
+  }
+  .cg-comment {
+    padding: 0.85rem;
+  }
+  .cg-sidebar-copyright {
+    display: none;
+  }
+}
+
+/* ══════════ Worker Blog优化闪念显示 ══════════ */
+video {
+  width: 100%;
+}
+
+.memo-card a {
+  color: var(--accent);
+}
+
+.memo-card a:hover {
+  text-decoration: underline;
+}
+
+.hor-player,
+.ver-player,
+.hor-image,
+.ver-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+@media (max-width: 480px) {
+  .ver-player {
+    width: 100%;
+    aspect-ratio: 9 / 16;
+  }
+}

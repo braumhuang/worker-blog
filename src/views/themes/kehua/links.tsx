@@ -11,7 +11,7 @@ export function Links({
 }) {
   return (
     <>
-      <PageHeading title="导航" subtitle={`添加页面 ${links.length} 个链接`} />
+      <PageHeading title="友链" subtitle="这是一些值得一逛的角落" />
       <div class="links-grid">
         {links.map((link) => {
           const description = link.info.trim();

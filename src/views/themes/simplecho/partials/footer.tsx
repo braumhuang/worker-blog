@@ -23,16 +23,31 @@ export function Footer({ options }: { options: OptionMap }) {
     <footer class="sc-footer" role="contentinfo">
       <div class="sc-slogan">STAY VIBRANT</div>
       <div class="sc-social">
-        <a href="/" aria-label="首页" title="首页"><Icon name="home" /></a>
-        {social.map(([icon, label, href]) => href ? (
-          <a href={href} target={icon === "mail" ? undefined : "_blank"} rel={icon === "mail" ? undefined : "noopener noreferrer"} aria-label={label} title={label}>
-            <Icon name={icon} />
-          </a>
-        ) : null)}
+        <a href="/" aria-label="首页" title="首页">
+          <Icon name="home" />
+        </a>
+        {social.map(([icon, label, href]) =>
+          href ? (
+            <a
+              href={href}
+              target={icon === "mail" ? undefined : "_blank"}
+              rel={icon === "mail" ? undefined : "noopener noreferrer"}
+              aria-label={label}
+              title={label}
+            >
+              <Icon name={icon} />
+            </a>
+          ) : null,
+        )}
       </div>
       <div class="sc-footer-info">
         © {new Date().getFullYear()} <a href="/">{options.site_title}</a>
-        {footerInfo ? <><span> · </span><span dangerouslySetInnerHTML={{ __html: footerInfo }} /></> : null}
+        {footerInfo ? (
+          <>
+            <span> · </span>
+            <span dangerouslySetInnerHTML={{ __html: footerInfo }} />
+          </>
+        ) : null}
       </div>
       <div class="sc-footer-power">Simple + Echo = 💖</div>
     </footer>

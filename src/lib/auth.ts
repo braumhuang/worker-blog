@@ -89,8 +89,7 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
       "SELECT cookie, expired FROM blog_sessions WHERE cookie = ? LIMIT 1",
       token,
     );
-    if (row && row.expired > now)
-      putCachedSession(token, row.expired);
+    if (row && row.expired > now) putCachedSession(token, row.expired);
   }
   if (!row || row.expired <= now) {
     if (row)

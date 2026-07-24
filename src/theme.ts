@@ -3,7 +3,7 @@ export const THEME_NAMES = {
   writecho: "Writecho",
   printer: "Printer",
   vermillion: "Vermillion",
-  simplecho: "Simplecho",
+  // simplecho: "Simplecho",
   chatgpt: "ChatGPT",
 } as const;
 

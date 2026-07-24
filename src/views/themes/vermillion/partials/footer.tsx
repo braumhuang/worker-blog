@@ -8,7 +8,9 @@ export function Footer({ options }: { options: OptionMap }) {
     <>
       <div class="folio">p. i</div>
       <footer class="vermillion-footer">
-        <span>© {new Date().getFullYear()} {options.site_title}</span>
+        <span>
+          © {new Date().getFullYear()} {options.site_title}
+        </span>
         {footerInfo ? (
           <span dangerouslySetInnerHTML={{ __html: footerInfo }} />
         ) : null}

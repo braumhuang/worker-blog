@@ -516,7 +516,6 @@ html.dark .power-dot {
 
 .ctrls {
   display: flex;
-  align-items: center;
   gap: 14px;
 }
 
@@ -3752,7 +3751,7 @@ html.printer-font-sans body * {
   color: inherit;
   background: none;
   border: 0;
-  padding: 0;
+  padding: 5px;
   cursor: pointer;
   text-decoration: none;
 }
@@ -3997,5 +3996,33 @@ html.printer-font-sans body * {
   }
   .comment-fields {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ══════════ Worker Blog优化闪念显示 ══════════ */
+video {
+  width: 100%;
+}
+
+.memo-item a {
+  color: var(--color-primary);
+}
+
+.memo-item a:hover {
+  text-decoration: underline;
+}
+
+.hor-player,
+.ver-player,
+.hor-image,
+.ver-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+@media (max-width: 480px) {
+  .ver-player {
+    width: 100%;
+    aspect-ratio: 9 / 16;
   }
 }

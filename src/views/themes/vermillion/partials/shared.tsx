@@ -97,20 +97,87 @@ export function Seal({
     <div class="seal" aria-label={chars.join("")}>
       <svg viewBox="0 0 132 132" xmlns="http://www.w3.org/2000/svg" role="img">
         <defs>
-          <filter id="vermillion-stamp-distress" x="-10%" y="-10%" width="120%" height="120%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="3" />
+          <filter
+            id="vermillion-stamp-distress"
+            x="-10%"
+            y="-10%"
+            width="120%"
+            height="120%"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.85"
+              numOctaves="2"
+              seed="3"
+            />
             <feDisplacementMap in="SourceGraphic" scale="1.6" />
           </filter>
         </defs>
-        <g filter="url(#vermillion-stamp-distress)" fill="currentColor" stroke="currentColor">
-          <rect x="8" y="8" width="116" height="116" rx="3" fill="none" stroke-width="3.5" />
-          <rect x="14" y="14" width="104" height="104" rx="1" fill="none" stroke-width="1" />
+        <g
+          filter="url(#vermillion-stamp-distress)"
+          fill="currentColor"
+          stroke="currentColor"
+        >
+          <rect
+            x="8"
+            y="8"
+            width="116"
+            height="116"
+            rx="3"
+            fill="none"
+            stroke-width="3.5"
+          />
+          <rect
+            x="14"
+            y="14"
+            width="104"
+            height="104"
+            rx="1"
+            fill="none"
+            stroke-width="1"
+          />
           <line x1="66" y1="18" x2="66" y2="114" stroke-width="1" />
           <line x1="18" y1="66" x2="114" y2="66" stroke-width="1" />
-          <text x="42" y="56" font-family="'Noto Serif SC',serif" font-size="28" font-weight="700" text-anchor="middle">{c1}</text>
-          <text x="90" y="56" font-family="'Noto Serif SC',serif" font-size="28" font-weight="700" text-anchor="middle">{c2}</text>
-          <text x="42" y="100" font-family="'Noto Serif SC',serif" font-size="28" font-weight="700" text-anchor="middle">{c3}</text>
-          <text x="90" y="100" font-family="'Noto Serif SC',serif" font-size="28" font-weight="700" text-anchor="middle">{c4}</text>
+          <text
+            x="42"
+            y="56"
+            font-family="'Noto Serif SC',serif"
+            font-size="28"
+            font-weight="700"
+            text-anchor="middle"
+          >
+            {c1}
+          </text>
+          <text
+            x="90"
+            y="56"
+            font-family="'Noto Serif SC',serif"
+            font-size="28"
+            font-weight="700"
+            text-anchor="middle"
+          >
+            {c2}
+          </text>
+          <text
+            x="42"
+            y="100"
+            font-family="'Noto Serif SC',serif"
+            font-size="28"
+            font-weight="700"
+            text-anchor="middle"
+          >
+            {c3}
+          </text>
+          <text
+            x="90"
+            y="100"
+            font-family="'Noto Serif SC',serif"
+            font-size="28"
+            font-weight="700"
+            text-anchor="middle"
+          >
+            {c4}
+          </text>
         </g>
       </svg>
     </div>
@@ -124,7 +191,9 @@ export function ThemeCloud({ tags }: { tags: BlogMeta[] }) {
       {tags.slice(0, 42).map((tag, index) => (
         <>
           <a href={`/tag/${encodeURIComponent(tag.slug)}/`}>{tag.name}</a>
-          {index < Math.min(tags.length, 42) - 1 ? <span class="sep">·</span> : null}
+          {index < Math.min(tags.length, 42) - 1 ? (
+            <span class="sep">·</span>
+          ) : null}
         </>
       ))}
     </div>

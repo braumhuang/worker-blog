@@ -1022,9 +1022,6 @@ html[data-theme="dark"] .site-controls .icon-sun {
   color: var(--accent);
   letter-spacing: 0.05em;
 }
-.memo-tag::before {
-  content: "#";
-}
 .memo-tag + .memo-tag {
   margin-left: var(--space-2);
 }
@@ -1895,5 +1892,33 @@ html[data-theme="dark"] .comment-form textarea {
   }
   .post-cover {
     aspect-ratio: 16/9;
+  }
+}
+
+/* ══════════ Worker Blog优化闪念显示 ══════════ */
+video {
+  width: 100%;
+}
+
+.memo-item a {
+  color: var(--color-primary);
+}
+
+.memo-item a:hover {
+  text-decoration: underline;
+}
+
+.hor-player,
+.ver-player,
+.hor-image,
+.ver-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+@media (max-width: 480px) {
+  .ver-player {
+    width: 100%;
+    aspect-ratio: 9 / 16;
   }
 }
