@@ -4,6 +4,7 @@ export const THEME_NAMES = {
   printer: "Printer",
   vermillion: "Vermillion",
   simplecho: "Simplecho",
+  chatgpt: "ChatGPT",
 } as const;
 
 export type ThemeName = keyof typeof THEME_NAMES;

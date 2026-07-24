@@ -14,7 +14,7 @@
 - 友链管理
 - R2 附件上传、文章附件关联和附件模板
 - JSON 数据导入、导出
-- Kehua、Writecho、Printer、Vermillion、Simplecho 五套前台主题
+- Kehua、Writecho、Printer、Vermillion、Simplecho、ChatGPT 六套前台主题
 - 后台登录会话和站点设置缓存
 - GitHub Actions 手动一键部署
 
@@ -60,7 +60,8 @@ src/
         ├── writecho/
         ├── printer/
         ├── vermillion/
-        └── simplecho/
+        ├── simplecho/
+        └── chatgpt/
 static/
 ├── admin/
 │   ├── admin.css
@@ -69,7 +70,8 @@ static/
 ├── writecho/
 ├── printer/
 ├── vermillion/
-└── simplecho/
+├── simplecho/
+└── chatgpt/
 schema.sql                         当前完整数据库结构
 seed.sql                           本地开发模拟数据
 wrangler.toml                      本地运行和手动部署配置
@@ -87,6 +89,7 @@ export const THEME_NAMES = {
   printer: "Printer",
   vermillion: "Vermillion",
   simplecho: "Simplecho",
+  chatgpt: "ChatGPT",
 } as const;
 ```
 
@@ -99,6 +102,7 @@ export const THEME_NAMES = {
 - `printer`：打字机与纸张风格。
 - `vermillion`：朱砂宣纸期刊风格，包含罗马数字侧栏、标签墙、卷首、朱印、明暗模式、搜索、文章目录、阅读进度和闪念热力图。
 - `simplecho`：极简卡片博客风格，使用 1000px 居中容器、左文右图文章卡、`# 分类 # 标签` 元信息、四套读者配色、自动深色、搜索、阅读进度和 `STAY VIBRANT` 页脚。
+- `chatgpt`：ChatGPT 对话式界面，包含会话侧栏、最近文章、用户与 AI 消息流、深浅模式、弹窗搜索、底部对话搜索、文章操作按钮、闪念热力图和移动端抽屉布局。
 
 ### JSX 组件目录
 
@@ -143,6 +147,7 @@ static/<theme>/
 /writecho/public.js
 /printer/images/default-cover.svg
 /simplecho/public.css
+/chatgpt/public.js
 ```
 
 ### 新增主题

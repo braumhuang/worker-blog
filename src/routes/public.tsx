@@ -626,21 +626,30 @@ publicRoutes.get("/links/", async (c) => {
 });
 
 publicRoutes.get("/api/search", async (c) => {
-  const q = c.req.query("q")?.trim();
-  if (!q) return c.json({ items: [] });
+  const q = c.req.query("q")?.trim() ?? "";
+  const now = nowSeconds();
   const like = `%${q.replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
-  const rows = await dbAll<BlogContent>(
-    c.env.BLOG_DB,
-    "SELECT DISTINCT c.* FROM blog_contents c LEFT JOIN blog_relationships r ON r.cid=c.cid LEFT JOIN blog_metas m ON m.mid=r.mid WHERE c.status='publish' AND c.released<=? AND c.type IN ('post','page','memo') AND (c.title LIKE ? ESCAPE '\\' OR c.text LIKE ? ESCAPE '\\' OR m.name LIKE ? ESCAPE '\\') ORDER BY c.released DESC LIMIT 12",
-    nowSeconds(),
-    like,
-    like,
-    like,
-  );
+  const rows = q
+    ? await dbAll<BlogContent>(
+        c.env.BLOG_DB,
+        "SELECT DISTINCT c.* FROM blog_contents c LEFT JOIN blog_relationships r ON r.cid=c.cid LEFT JOIN blog_metas m ON m.mid=r.mid WHERE c.status='publish' AND c.released<=? AND c.type IN ('post','page','memo') AND (c.title LIKE ? ESCAPE '\\' OR c.text LIKE ? ESCAPE '\\' OR m.name LIKE ? ESCAPE '\\') ORDER BY c.released DESC LIMIT 12",
+        now,
+        like,
+        like,
+        like,
+      )
+    : await dbAll<BlogContent>(
+        c.env.BLOG_DB,
+        "SELECT * FROM blog_contents WHERE status='publish' AND released<=? AND type IN ('post','page','memo') ORDER BY released DESC LIMIT 20",
+        now,
+      );
   return c.json({
     items: rows.map((row) => ({
-      title: row.title,
+      title: row.title || (row.type === "memo" ? "闪念" : "未命名"),
       excerpt: limitedExcerptOf(row.text, 90),
+      date: isoDate(row.released, "UTC"),
+      released: row.released,
+      type: row.type,
       url:
         row.type === "memo"
           ? `/memos/#memo-${row.cid}`

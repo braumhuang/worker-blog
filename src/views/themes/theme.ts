@@ -69,6 +69,20 @@ import { Post as SimplechoPost } from "./simplecho/post";
 import { Tag as SimplechoTag } from "./simplecho/tag";
 import { Tags as SimplechoTags } from "./simplecho/tags";
 import { Comments as SimplechoComments } from "./simplecho/partials/comments";
+import { NotFound as ChatGPTNotFound } from "./chatgpt/404";
+import { About as ChatGPTAbout } from "./chatgpt/about";
+import { Archives as ChatGPTArchives } from "./chatgpt/archives";
+import { Base as ChatGPTBase } from "./chatgpt/base";
+import { Categories as ChatGPTCategories } from "./chatgpt/categories";
+import { Category as ChatGPTCategory } from "./chatgpt/category";
+import { Index as ChatGPTIndex } from "./chatgpt/index";
+import { Links as ChatGPTLinks } from "./chatgpt/links";
+import { Memos as ChatGPTMemos } from "./chatgpt/memos";
+import { Page as ChatGPTPage } from "./chatgpt/page";
+import { Post as ChatGPTPost } from "./chatgpt/post";
+import { Tag as ChatGPTTag } from "./chatgpt/tag";
+import { Tags as ChatGPTTags } from "./chatgpt/tags";
+import { Comments as ChatGPTComments } from "./chatgpt/partials/comments";
 const themes = {
   kehua: {
     NotFound: KehuaNotFound,
@@ -149,6 +163,22 @@ const themes = {
     Post: SimplechoPost,
     Tag: SimplechoTag,
     Tags: SimplechoTags,
+  },
+  chatgpt: {
+    NotFound: ChatGPTNotFound,
+    About: ChatGPTAbout,
+    Archives: ChatGPTArchives,
+    Base: ChatGPTBase,
+    Categories: ChatGPTCategories,
+    Category: ChatGPTCategory,
+    Comments: ChatGPTComments,
+    Index: ChatGPTIndex,
+    Links: ChatGPTLinks,
+    Memos: ChatGPTMemos,
+    Page: ChatGPTPage,
+    Post: ChatGPTPost,
+    Tag: ChatGPTTag,
+    Tags: ChatGPTTags,
   },
 } as const satisfies Record<ThemeName, object>;
 
