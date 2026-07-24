@@ -334,7 +334,7 @@ export function OptionsPage({
               导入数据
             </button>
             <small class="muted">
-              导出和导入不包含 blog_cookies，也不包含 R2
+              导出和导入不包含 blog_sessions，也不包含 R2
               文件本体。自增表保留主键直接 INSERT；非自增表按主键更新或插入。
             </small>
           </form>

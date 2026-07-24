@@ -4,7 +4,7 @@ import type { AppEnv } from "../types";
 import { dbFirst, dbRun } from "./db";
 import {
   getCachedSession,
-  invalidateSessionCache,
+  deleteCachedSession,
   putCachedSession,
 } from "./cache";
 import {
@@ -34,11 +34,11 @@ export async function createAdminSession(c: Context<AppEnv>): Promise<void> {
   const expired = nowSeconds() + SESSION_SECONDS;
   await dbRun(
     c.env.BLOG_DB,
-    "INSERT INTO blog_cookies(cookie, expired) VALUES(?, ?)",
+    "INSERT INTO blog_sessions(cookie, expired) VALUES(?, ?)",
     token,
     expired,
   );
-  await putCachedSession(token, expired, nowSeconds());
+  await putCachedSession(token, expired);
   setCookie(c, SESSION_COOKIE, token, cookieOptions(c));
 }
 
@@ -47,10 +47,10 @@ export async function destroyAdminSession(c: Context<AppEnv>): Promise<void> {
   if (token) {
     await dbRun(
       c.env.BLOG_DB,
-      "DELETE FROM blog_cookies WHERE cookie = ?",
+      "DELETE FROM blog_sessions WHERE cookie = ?",
       token,
     );
-    await invalidateSessionCache(token);
+    await deleteCachedSession(token);
   }
   deleteCookie(c, SESSION_COOKIE, {
     path: "/",
@@ -86,20 +86,20 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
   else {
     row = await dbFirst<SessionRow>(
       c.env.BLOG_DB,
-      "SELECT cookie, expired FROM blog_cookies WHERE cookie = ? LIMIT 1",
+      "SELECT cookie, expired FROM blog_sessions WHERE cookie = ? LIMIT 1",
       token,
     );
     if (row && row.expired > now)
-      await putCachedSession(token, row.expired, now);
+      await putCachedSession(token, row.expired);
   }
   if (!row || row.expired <= now) {
     if (row)
       await dbRun(
         c.env.BLOG_DB,
-        "DELETE FROM blog_cookies WHERE cookie = ?",
+        "DELETE FROM blog_sessions WHERE cookie = ?",
         token,
       );
-    await invalidateSessionCache(token);
+    await deleteCachedSession(token);
     deleteCookie(c, SESSION_COOKIE, {
       path: "/",
       secure: new URL(c.req.url).protocol === "https:",
@@ -112,11 +112,11 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
     const renewed = now + SESSION_SECONDS;
     await dbRun(
       c.env.BLOG_DB,
-      "UPDATE blog_cookies SET expired = ? WHERE cookie = ?",
+      "UPDATE blog_sessions SET expired = ? WHERE cookie = ?",
       renewed,
       token,
     );
-    await putCachedSession(token, renewed, now);
+    await putCachedSession(token, renewed);
     setCookie(c, SESSION_COOKIE, token, cookieOptions(c));
   }
 

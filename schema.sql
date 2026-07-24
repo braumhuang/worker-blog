@@ -67,13 +67,13 @@ CREATE TABLE IF NOT EXISTS blog_options (
   value TEXT NOT NULL DEFAULT ''
 );
 
-CREATE TABLE IF NOT EXISTS blog_cookies (
+CREATE TABLE IF NOT EXISTS blog_sessions (
   cookie TEXT PRIMARY KEY,
   expired INTEGER NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_cookies_expired
-  ON blog_cookies(expired);
+CREATE INDEX IF NOT EXISTS idx_sessions_expired
+  ON blog_sessions(expired);
 
 CREATE TABLE IF NOT EXISTS blog_links (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

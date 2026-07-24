@@ -12,7 +12,7 @@ DELETE FROM blog_links;
 
 DELETE FROM blog_options;
 
-DELETE FROM blog_cookies;
+DELETE FROM blog_sessions;
 
 DELETE FROM sqlite_sequence WHERE name IN ('blog_contents','blog_metas','blog_links','blog_comments');
 

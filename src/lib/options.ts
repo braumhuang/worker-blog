@@ -1,10 +1,6 @@
 import type { OptionMap } from "../types";
 import { dbAll } from "./db";
-import {
-  getCachedOptions,
-  invalidateOptionsCache,
-  putCachedOptions,
-} from "./cache";
+import { getCachedOptions, putCachedOptions } from "./cache";
 import { normalizeFaviconColor, normalizeFaviconText } from "./favicon";
 import { DEFAULT_THEME, normalizeThemeName } from "../theme";
 import {
@@ -123,19 +119,28 @@ function normalizeOptions(stored: OptionMap): OptionMap {
   return options;
 }
 
+async function readOptionsFromDatabase(db: D1Database): Promise<OptionMap> {
+  const rows = await dbAll<{ key: string; value: string }>(
+    db,
+    'SELECT "key" AS key, value FROM blog_options',
+  );
+  return normalizeOptions(
+    Object.fromEntries(rows.map((row) => [row.key, row.value])),
+  );
+}
+
+export async function refreshOptionsCache(db: D1Database): Promise<OptionMap> {
+  const options = await readOptionsFromDatabase(db);
+  await putCachedOptions(options);
+  return options;
+}
+
 export async function getOptions(db: D1Database): Promise<OptionMap> {
   const cached = await getCachedOptions();
   if (cached) return normalizeOptions(cached);
 
   try {
-    const rows = await dbAll<{ key: string; value: string }>(
-      db,
-      'SELECT "key" AS key, value FROM blog_options',
-    );
-    const stored = Object.fromEntries(rows.map((row) => [row.key, row.value]));
-    const options = normalizeOptions(stored);
-    await putCachedOptions(options);
-    return options;
+    return await refreshOptionsCache(db);
   } catch (error) {
     console.error("读取站点设置失败，使用默认设置。", error);
     return normalizeOptions({});
@@ -146,6 +151,12 @@ export async function saveOptions(
   db: D1Database,
   values: OptionMap,
 ): Promise<void> {
+  if (!Object.keys(values).length) return;
+
+  const cached = await getCachedOptions();
+  const current = cached
+    ? normalizeOptions(cached)
+    : await readOptionsFromDatabase(db);
   const statements = Object.entries(values).map(([key, value]) =>
     db
       .prepare(
@@ -156,8 +167,6 @@ export async function saveOptions(
       )
       .bind(key, value),
   );
-  if (statements.length) {
-    await db.batch(statements);
-    await invalidateOptionsCache();
-  }
+  await db.batch(statements);
+  await putCachedOptions(normalizeOptions({ ...current, ...values }));
 }

@@ -20,12 +20,12 @@ import {
   verifyCredentials,
 } from "../lib/auth";
 import { dbAll, dbFirst, dbRun } from "../lib/db";
-import { invalidateOptionsCache } from "../lib/cache";
 import { normalizeFaviconColor, normalizeFaviconText } from "../lib/favicon";
 import { renderMarkdown } from "../lib/markdown";
 import {
   getOptions,
   normalizeFileCdnUrl,
+  refreshOptionsCache,
   saveOptions,
   TIMEZONE_VALUES,
 } from "../lib/options";
@@ -174,7 +174,7 @@ adminRoutes.post("/admin/login", async (c) => {
   c.executionCtx.waitUntil(
     dbRun(
       c.env.BLOG_DB,
-      "DELETE FROM blog_cookies WHERE expired <= ?",
+      "DELETE FROM blog_sessions WHERE expired <= ?",
       nowSeconds(),
     ).then(() => undefined),
   );
@@ -1088,7 +1088,7 @@ adminRoutes.post("/admin/data/import", async (c) => {
       c.env.BLOG_DB,
       "UPDATE blog_metas SET count = (SELECT COUNT(*) FROM blog_relationships r WHERE r.mid = blog_metas.mid)",
     );
-    await invalidateOptionsCache();
+    await refreshOptionsCache(c.env.BLOG_DB);
   } catch (error) {
     console.error(error);
     return c.text(

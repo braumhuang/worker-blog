@@ -5,8 +5,6 @@ const SESSIONS_CACHE_NAME = "sessions_cache";
 const OPTIONS_CACHE_KEY = new Request(
   "https://worker-blog-cache.invalid/options/v1",
 );
-const OPTIONS_CACHE_SECONDS = 5 * 60;
-const SESSION_CACHE_SECONDS = 5 * 60;
 
 export interface CachedSession {
   expired: number;
@@ -35,16 +33,10 @@ async function putJson(
   cache: Cache,
   key: Request,
   value: unknown,
-  maxAge: number,
 ): Promise<void> {
-  if (maxAge <= 0) {
-    await cache.delete(key).catch(() => false);
-    return;
-  }
   const response = new Response(JSON.stringify(value), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": `public, max-age=${Math.floor(maxAge)}`,
     },
   });
   await cache.put(key, response).catch(() => undefined);
@@ -80,13 +72,7 @@ export async function getCachedOptions(): Promise<OptionMap | null> {
 
 export async function putCachedOptions(options: OptionMap): Promise<void> {
   const cache = await openCache(OPTIONS_CACHE_NAME);
-  if (cache)
-    await putJson(cache, OPTIONS_CACHE_KEY, options, OPTIONS_CACHE_SECONDS);
-}
-
-export async function invalidateOptionsCache(): Promise<void> {
-  const cache = await openCache(OPTIONS_CACHE_NAME);
-  if (cache) await cache.delete(OPTIONS_CACHE_KEY).catch(() => false);
+  if (cache) await putJson(cache, OPTIONS_CACHE_KEY, options);
 }
 
 export async function getCachedSession(
@@ -111,15 +97,13 @@ export async function getCachedSession(
 export async function putCachedSession(
   token: string,
   expired: number,
-  now: number,
 ): Promise<void> {
   const cache = await openCache(SESSIONS_CACHE_NAME);
   if (!cache) return;
-  const ttl = Math.min(SESSION_CACHE_SECONDS, expired - now);
-  await putJson(cache, await sessionCacheKey(token), { expired }, ttl);
+  await putJson(cache, await sessionCacheKey(token), { expired });
 }
 
-export async function invalidateSessionCache(token: string): Promise<void> {
+export async function deleteCachedSession(token: string): Promise<void> {
   const cache = await openCache(SESSIONS_CACHE_NAME);
   if (cache)
     await cache.delete(await sessionCacheKey(token)).catch(() => false);
