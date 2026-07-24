@@ -56,6 +56,18 @@ async function navigationCategories(
   );
 }
 
+
+async function themeSidebarTags(
+  db: D1Database,
+  options: OptionMap,
+): Promise<BlogMeta[]> {
+  if (options.site_theme !== "vermillion") return [];
+  return dbAll<BlogMeta>(
+    db,
+    "SELECT * FROM blog_metas WHERE type='tag' ORDER BY count DESC,name COLLATE NOCASE LIMIT 60",
+  );
+}
+
 async function enrichContents(
   db: D1Database,
   contents: BlogContent[],
@@ -141,12 +153,14 @@ async function listByMeta(
   );
   const posts = await enrichContents(c.env.BLOG_DB, rows);
   const categories = await navigationCategories(c.env.BLOG_DB, options);
+  const sidebarTags = await themeSidebarTags(c.env.BLOG_DB, options);
   return c.html(
     <Base
       options={options}
       title={meta.name}
       active={type === "tag" ? "tags" : "categories"}
       categories={categories}
+      tags={sidebarTags}
     >
       {type === "tag" ? (
         <Tag
@@ -269,11 +283,14 @@ publicRoutes.get("/", async (c) => {
     (safePage - 1) * perPage,
   );
   const posts = await enrichContents(c.env.BLOG_DB, rows);
+  const categories = await navigationCategories(c.env.BLOG_DB, options);
+  const sidebarTags = await themeSidebarTags(c.env.BLOG_DB, options);
   return c.html(
     <Base
       options={options}
       active="home"
-      categories={await navigationCategories(c.env.BLOG_DB, options)}
+      categories={categories}
+      tags={sidebarTags}
     >
       <HomePage
         posts={posts}
@@ -281,6 +298,8 @@ publicRoutes.get("/", async (c) => {
         fileCdnUrl={options.file_cdn_url}
         page={safePage}
         totalPages={totalPages}
+        tags={sidebarTags}
+        options={options}
       />
     </Base>,
   );
@@ -328,6 +347,7 @@ publicRoutes.get("/post/:slug/", async (c) => {
       active={navigationItem?.id}
       description={limitedExcerptOf(content.text, 150)}
       categories={await navigationCategories(c.env.BLOG_DB, options)}
+      tags={await themeSidebarTags(c.env.BLOG_DB, options)}
     >
       {template === "about" ? (
         <About options={options} html={html} />
@@ -473,6 +493,7 @@ publicRoutes.get("/memos/", async (c) => {
       title="闪念"
       active="memos"
       categories={await navigationCategories(c.env.BLOG_DB, options)}
+      tags={await themeSidebarTags(c.env.BLOG_DB, options)}
     >
       <Memos
         memos={memos}
@@ -523,6 +544,7 @@ publicRoutes.get("/archives/", async (c) => {
       title="归档"
       active="archives"
       categories={await navigationCategories(c.env.BLOG_DB, options)}
+      tags={await themeSidebarTags(c.env.BLOG_DB, options)}
     >
       <Archives
         years={years}
@@ -549,6 +571,7 @@ publicRoutes.get("/categories/", async (c) => {
       title="分类"
       active="categories"
       categories={categories}
+      tags={await themeSidebarTags(c.env.BLOG_DB, options)}
     >
       <Categories categories={categories} />
     </Base>,
@@ -568,6 +591,7 @@ publicRoutes.get("/tags/", async (c) => {
       title="标签"
       active="tags"
       categories={await navigationCategories(c.env.BLOG_DB, options)}
+      tags={options.site_theme === "vermillion" ? tags.slice(0, 60) : []}
     >
       <Tags tags={tags} />
     </Base>,
@@ -594,6 +618,7 @@ publicRoutes.get("/links/", async (c) => {
       title="导航"
       active="links"
       categories={await navigationCategories(c.env.BLOG_DB, options)}
+      tags={await themeSidebarTags(c.env.BLOG_DB, options)}
     >
       <Links links={links} fileCdnUrl={options.file_cdn_url} />
     </Base>,

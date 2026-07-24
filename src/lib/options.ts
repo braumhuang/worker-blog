@@ -131,12 +131,12 @@ async function readOptionsFromDatabase(db: D1Database): Promise<OptionMap> {
 
 export async function refreshOptionsCache(db: D1Database): Promise<OptionMap> {
   const options = await readOptionsFromDatabase(db);
-  await putCachedOptions(options);
+  putCachedOptions(options);
   return options;
 }
 
 export async function getOptions(db: D1Database): Promise<OptionMap> {
-  const cached = await getCachedOptions();
+  const cached = getCachedOptions();
   if (cached) return normalizeOptions(cached);
 
   try {
@@ -153,7 +153,7 @@ export async function saveOptions(
 ): Promise<void> {
   if (!Object.keys(values).length) return;
 
-  const cached = await getCachedOptions();
+  const cached = getCachedOptions();
   const current = cached
     ? normalizeOptions(cached)
     : await readOptionsFromDatabase(db);
@@ -168,5 +168,5 @@ export async function saveOptions(
       .bind(key, value),
   );
   await db.batch(statements);
-  await putCachedOptions(normalizeOptions({ ...current, ...values }));
+  putCachedOptions(normalizeOptions({ ...current, ...values }));
 }

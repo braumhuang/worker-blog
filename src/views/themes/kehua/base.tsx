@@ -11,6 +11,7 @@ type BaseProps = PropsWithChildren<{
   canonical?: string;
   description?: string;
   categories?: BlogMeta[];
+  tags?: BlogMeta[];
 }>;
 
 export function Base({

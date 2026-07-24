@@ -38,7 +38,7 @@ export async function createAdminSession(c: Context<AppEnv>): Promise<void> {
     token,
     expired,
   );
-  await putCachedSession(token, expired);
+  putCachedSession(token, expired);
   setCookie(c, SESSION_COOKIE, token, cookieOptions(c));
 }
 
@@ -50,7 +50,7 @@ export async function destroyAdminSession(c: Context<AppEnv>): Promise<void> {
       "DELETE FROM blog_sessions WHERE cookie = ?",
       token,
     );
-    await deleteCachedSession(token);
+    deleteCachedSession(token);
   }
   deleteCookie(c, SESSION_COOKIE, {
     path: "/",
@@ -81,7 +81,7 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
 
   const now = nowSeconds();
   let row: SessionRow | null = null;
-  const cached = await getCachedSession(token);
+  const cached = getCachedSession(token);
   if (cached) row = { cookie: token, expired: cached.expired };
   else {
     row = await dbFirst<SessionRow>(
@@ -90,7 +90,7 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
       token,
     );
     if (row && row.expired > now)
-      await putCachedSession(token, row.expired);
+      putCachedSession(token, row.expired);
   }
   if (!row || row.expired <= now) {
     if (row)
@@ -99,7 +99,7 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
         "DELETE FROM blog_sessions WHERE cookie = ?",
         token,
       );
-    await deleteCachedSession(token);
+    deleteCachedSession(token);
     deleteCookie(c, SESSION_COOKIE, {
       path: "/",
       secure: new URL(c.req.url).protocol === "https:",
@@ -116,7 +116,7 @@ export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
       renewed,
       token,
     );
-    await putCachedSession(token, renewed);
+    putCachedSession(token, renewed);
     setCookie(c, SESSION_COOKIE, token, cookieOptions(c));
   }
 

@@ -1,6 +1,6 @@
 # worker-blog
 
-`worker-blog` 是一个运行在 Cloudflare Workers 上的轻量博客系统。前台和后台均使用 Hono JSX 服务端渲染，D1 保存业务数据，R2 保存上传文件，Workers Static Assets 发布主题及后台静态资源，Workers Cache API 缓存站点设置和后台会话。
+`worker-blog` 是一个运行在 Cloudflare Workers 上的轻量博客系统。前台和后台均使用 Hono JSX 服务端渲染，D1 保存业务数据，R2 保存上传文件，Workers Static Assets 发布主题及后台静态资源，Worker 实例内的模块级内存对象缓存站点设置和后台会话。
 
 项目适合个人博客、小型内容站点和 Cloudflare 全栈应用的学习与二次开发。
 
@@ -14,7 +14,7 @@
 - 友链管理
 - R2 附件上传、文章附件关联和附件模板
 - JSON 数据导入、导出
-- Kehua、Writecho、Printer 三套前台主题
+- Kehua、Writecho、Printer、Vermillion 四套前台主题
 - 后台登录会话和站点设置缓存
 - GitHub Actions 手动一键部署
 
@@ -26,7 +26,7 @@
 - Cloudflare D1
 - Cloudflare R2
 - Workers Static Assets
-- Workers Cache API
+- Worker 实例内存缓存
 - Marked
 
 ## 项目结构
@@ -58,14 +58,16 @@ src/
         ├── theme.ts               主题组件注册表
         ├── kehua/
         ├── writecho/
-        └── printer/
+        ├── printer/
+        └── vermillion/
 static/
 ├── admin/
 │   ├── admin.css
 │   └── admin.js
 ├── kehua/
 ├── writecho/
-└── printer/
+├── printer/
+└── vermillion/
 schema.sql                         当前完整数据库结构
 seed.sql                           本地开发模拟数据
 wrangler.toml                      本地运行和手动部署配置
@@ -81,10 +83,18 @@ export const THEME_NAMES = {
   kehua: "Kehua",
   writecho: "Writecho",
   printer: "Printer",
+  vermillion: "Vermillion",
 } as const;
 ```
 
 `blog_options.site_theme` 保存主题文件夹名。设置不存在、设置值无效或数据库读取失败时，默认使用 `kehua`。
+
+内置主题定位：
+
+- `kehua`：清爽的内容列表与阅读布局。
+- `writecho`：文艺杂志式博客排版。
+- `printer`：打字机与纸张风格。
+- `vermillion`：朱砂宣纸期刊风格，包含罗马数字侧栏、标签墙、卷首、朱印、明暗模式、搜索、文章目录、阅读进度和闪念热力图。
 
 ### JSX 组件目录
 
@@ -545,17 +555,17 @@ blog_comments
 
 ### options_cache
 
-缓存规范化后的全部站点设置，不设置缓存时间。读取优先使用 `options_cache`；缓存不存在、内容无效或 Cache API 不可用时才读取 `blog_options`，并将完整设置写回缓存。
+`options_cache` 是 `src/lib/cache.ts` 中的模块级普通对象，结构为 `{ key: value }`，不使用 Workers Cache API，也不设置缓存时间。读取优先使用该对象；对象为空或内容无效时才读取 `blog_options`，并将规范化后的完整设置写回内存。
 
 后台保存站点设置、导航和附件模板时，先写入 `blog_options`，数据库写入成功后立即把合并后的完整设置同步到 `options_cache`。导入数据后也会从 `blog_options` 重新加载并覆盖缓存。
 
 ### sessions_cache
 
-使用后台会话令牌的 SHA-256 摘要作为缓存键，不设置缓存时间。后台请求优先读取 `sessions_cache`；缓存未命中时才查询 `blog_sessions`，有效会话会立即写回缓存。
+`sessions_cache` 是 `src/lib/cache.ts` 中的模块级普通对象，结构为 `{ [cookie]: expired }`，直接以后台会话 Cookie 为键，不使用 Workers Cache API，也不设置额外缓存时间。后台请求优先读取该对象；缓存未命中时才查询 `blog_sessions`，有效会话会立即写回内存。
 
 会话是否有效只由记录中的 `expired` 判断。后台会话默认有效期为 10 天，剩余 2 天时自动续期；登录、续期、退出和过期处理都会同步更新 `blog_sessions` 与 `sessions_cache`。
 
-Cache API 可能被运行环境回收，因此缓存未命中时仍会回退到 D1，但正常命中不会读取 D1。
+模块级内存对象只属于当前 Worker 实例。实例被回收、重新启动或请求落到其他实例时，内存缓存可能为空，此时会自动回退到 D1 并重新填充；同一实例内正常命中不会读取 D1。
 
 ## 静态资源与附件
 

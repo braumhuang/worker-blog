@@ -2,7 +2,7 @@
 
 ## 项目定位
 
-`worker-blog` 是一个部署在 Cloudflare Workers 上的服务端渲染博客系统。前台主题和后台页面使用 Hono JSX；D1 保存内容与配置；R2 保存上传文件；Workers Static Assets 发布 CSS、JavaScript 和主题图片；Workers Cache API 用于减少设置和会话读取。
+`worker-blog` 是一个部署在 Cloudflare Workers 上的服务端渲染博客系统。前台主题和后台页面使用 Hono JSX；D1 保存内容与配置；R2 保存上传文件；Workers Static Assets 发布 CSS、JavaScript 和主题图片；Worker 实例内的模块级内存对象用于减少设置和会话读取。
 
 项目当前处于初始开发阶段，数据库结构由完整的 `schema.sql` 管理，不维护 migrations。
 
@@ -341,7 +341,10 @@ links
 kehua    Kehua
 writecho Writecho
 printer  Printer
+vermillion Vermillion
 ```
+
+`vermillion` 使用独立的 `src/views/themes/vermillion/` 组件目录与 `static/vermillion/` 静态资源目录。其页面结构以宣纸期刊为核心，左侧 rail 同时承载导航、标签和社交入口；首页包含卷首、朱砂印章和分栏文章卡；文章页包含目录、阅读进度、代码复制与回到顶部；闪念页使用服务端生成的年度活动热力图。
 
 主题选择过程：
 
@@ -509,24 +512,22 @@ RELATIVE_PATH
 
 ### options_cache
 
-- Cache 名称：`options_cache`；
-- Key：固定内部 URL；
-- 不设置缓存时间；
-- 缓存规范化后的全部站点设置；
-- 读取未命中时查询 `blog_options` 并回填缓存；
-- 保存设置、导航和附件模板时，数据库成功后直接同步完整缓存；
-- 导入数据后从 `blog_options` 重新加载并覆盖缓存。
+- 定义在 `src/lib/cache.ts`，是模块级普通对象 `options_cache = { key: value }`；
+- 不使用 Workers Cache API，也不设置缓存时间；
+- 保存规范化后的全部站点设置；
+- 对象为空或内容无效时查询 `blog_options` 并回填；
+- 保存设置、导航和附件模板时，数据库成功后直接同步完整对象；
+- 导入数据后从 `blog_options` 重新加载并覆盖对象。
 
 ### sessions_cache
 
-- Cache 名称：`sessions_cache`；
-- 使用令牌 SHA-256 摘要构造缓存 Key；
-- 不设置缓存时间；
-- 会话有效性由缓存值中的 `expired` 判断；
-- 读取未命中时才查询 `blog_sessions`，有效记录会回填缓存；
-- 登录、续期、退出和过期时同步更新缓存与数据库。
+- 定义在 `src/lib/cache.ts`，是模块级普通对象 `sessions_cache = { [cookie]: expired }`；
+- 直接使用会话 Cookie 作为属性名，不使用 Workers Cache API；
+- 不设置额外缓存时间，会话有效性只由值 `expired` 判断；
+- 内存未命中时才查询 `blog_sessions`，有效记录会回填；
+- 登录、续期、退出和过期时同步更新内存对象与数据库。
 
-Cache API 异常或缓存被运行环境回收时，读取会回退到 D1；正常缓存命中不访问 D1。
+模块级对象只存在于当前 Worker 实例中。实例被回收、重新启动或请求落到其他实例时会从 D1 回填；同一实例内正常命中不访问 D1。
 
 ## 数据导入和导出
 

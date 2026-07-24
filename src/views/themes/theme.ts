@@ -41,6 +41,20 @@ import { Post as PrinterPost } from "./printer/post";
 import { Tag as PrinterTag } from "./printer/tag";
 import { Tags as PrinterTags } from "./printer/tags";
 import { Comments as PrinterComments } from "./printer/partials/comments";
+import { NotFound as VermillionNotFound } from "./vermillion/404";
+import { About as VermillionAbout } from "./vermillion/about";
+import { Archives as VermillionArchives } from "./vermillion/archives";
+import { Base as VermillionBase } from "./vermillion/base";
+import { Categories as VermillionCategories } from "./vermillion/categories";
+import { Category as VermillionCategory } from "./vermillion/category";
+import { Index as VermillionIndex } from "./vermillion/index";
+import { Links as VermillionLinks } from "./vermillion/links";
+import { Memos as VermillionMemos } from "./vermillion/memos";
+import { Page as VermillionPage } from "./vermillion/page";
+import { Post as VermillionPost } from "./vermillion/post";
+import { Tag as VermillionTag } from "./vermillion/tag";
+import { Tags as VermillionTags } from "./vermillion/tags";
+import { Comments as VermillionComments } from "./vermillion/partials/comments";
 const themes = {
   kehua: {
     NotFound: KehuaNotFound,
@@ -89,6 +103,22 @@ const themes = {
     Post: PrinterPost,
     Tag: PrinterTag,
     Tags: PrinterTags,
+  },
+  vermillion: {
+    NotFound: VermillionNotFound,
+    About: VermillionAbout,
+    Archives: VermillionArchives,
+    Base: VermillionBase,
+    Categories: VermillionCategories,
+    Category: VermillionCategory,
+    Comments: VermillionComments,
+    Index: VermillionIndex,
+    Links: VermillionLinks,
+    Memos: VermillionMemos,
+    Page: VermillionPage,
+    Post: VermillionPost,
+    Tag: VermillionTag,
+    Tags: VermillionTags,
   },
 } as const satisfies Record<ThemeName, object>;
 

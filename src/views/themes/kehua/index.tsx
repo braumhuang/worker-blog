@@ -1,4 +1,4 @@
-import type { BlogMeta, ContentWithMeta } from "../../../types";
+import type { BlogMeta, ContentWithMeta, OptionMap } from "../../../types";
 import { Pagination } from "./partials/pagination";
 import { PostCard } from "./partials/post-card";
 
@@ -36,6 +36,8 @@ export function Index({
   totalPages: number;
   path?: string;
   categories?: BlogMeta[];
+  tags?: BlogMeta[];
+  options?: OptionMap;
 }) {
   return (
     <>

@@ -1,110 +1,65 @@
 import type { OptionMap } from "../types";
 
-const OPTIONS_CACHE_NAME = "options_cache";
-const SESSIONS_CACHE_NAME = "sessions_cache";
-const OPTIONS_CACHE_KEY = new Request(
-  "https://worker-blog-cache.invalid/options/v1",
-);
+/**
+ * 当前 Worker 实例内的站点设置缓存。
+ *
+ * 这是普通的模块级内存对象，不使用 Workers Cache API。Worker 实例被回收或
+ * 重新启动后对象会自然清空，下一次读取会由调用方从 D1 回填。
+ */
+export const options_cache: OptionMap = Object.create(null) as OptionMap;
+
+/**
+ * 当前 Worker 实例内的后台会话缓存，结构为 { [cookie]: expired }。
+ *
+ * expired 是会话自身的过期时间，不是缓存 TTL。该对象不设置额外缓存时间。
+ */
+export const sessions_cache: Record<string, number> = Object.create(
+  null,
+) as Record<string, number>;
 
 export interface CachedSession {
   expired: number;
 }
 
-async function openCache(name: string): Promise<Cache | null> {
-  try {
-    return await caches.open(name);
-  } catch {
+function hasOwn(object: object, key: PropertyKey): boolean {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+export function getCachedOptions(): OptionMap | null {
+  const keys = Object.keys(options_cache);
+  if (!keys.length) return null;
+
+  for (const key of keys) {
+    if (typeof options_cache[key] !== "string") {
+      delete options_cache[key];
+      return null;
+    }
+  }
+
+  return { ...options_cache };
+}
+
+export function putCachedOptions(options: OptionMap): void {
+  for (const key of Object.keys(options_cache)) delete options_cache[key];
+  Object.assign(options_cache, options);
+}
+
+export function getCachedSession(cookie: string): CachedSession | null {
+  if (!hasOwn(sessions_cache, cookie)) return null;
+
+  const expired = sessions_cache[cookie];
+  if (!Number.isFinite(expired)) {
+    delete sessions_cache[cookie];
     return null;
   }
+
+  return { expired };
 }
 
-async function readJson<T>(cache: Cache, key: Request): Promise<T | null> {
-  try {
-    const response = await cache.match(key);
-    if (!response) return null;
-    return (await response.json()) as T;
-  } catch {
-    await cache.delete(key).catch(() => false);
-    return null;
-  }
+export function putCachedSession(cookie: string, expired: number): void {
+  sessions_cache[cookie] = expired;
 }
 
-async function putJson(
-  cache: Cache,
-  key: Request,
-  value: unknown,
-): Promise<void> {
-  const response = new Response(JSON.stringify(value), {
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-    },
-  });
-  await cache.put(key, response).catch(() => undefined);
-}
-
-async function sessionCacheKey(token: string): Promise<Request> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(token),
-  );
-  const hash = Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
-  return new Request(`https://worker-blog-cache.invalid/sessions/${hash}`);
-}
-
-export async function getCachedOptions(): Promise<OptionMap | null> {
-  const cache = await openCache(OPTIONS_CACHE_NAME);
-  if (!cache) return null;
-  const value = await readJson<unknown>(cache, OPTIONS_CACHE_KEY);
-  if (
-    !value ||
-    typeof value !== "object" ||
-    Array.isArray(value) ||
-    !Object.values(value).every((item) => typeof item === "string")
-  ) {
-    if (value !== null)
-      await cache.delete(OPTIONS_CACHE_KEY).catch(() => false);
-    return null;
-  }
-  return value as OptionMap;
-}
-
-export async function putCachedOptions(options: OptionMap): Promise<void> {
-  const cache = await openCache(OPTIONS_CACHE_NAME);
-  if (cache) await putJson(cache, OPTIONS_CACHE_KEY, options);
-}
-
-export async function getCachedSession(
-  token: string,
-): Promise<CachedSession | null> {
-  const cache = await openCache(SESSIONS_CACHE_NAME);
-  if (!cache) return null;
-  const key = await sessionCacheKey(token);
-  const value = await readJson<unknown>(cache, key);
-  if (
-    !value ||
-    typeof value !== "object" ||
-    Array.isArray(value) ||
-    !Number.isFinite((value as Record<string, unknown>).expired)
-  ) {
-    if (value !== null) await cache.delete(key).catch(() => false);
-    return null;
-  }
-  return { expired: Number((value as Record<string, unknown>).expired) };
-}
-
-export async function putCachedSession(
-  token: string,
-  expired: number,
-): Promise<void> {
-  const cache = await openCache(SESSIONS_CACHE_NAME);
-  if (!cache) return;
-  await putJson(cache, await sessionCacheKey(token), { expired });
-}
-
-export async function deleteCachedSession(token: string): Promise<void> {
-  const cache = await openCache(SESSIONS_CACHE_NAME);
-  if (cache)
-    await cache.delete(await sessionCacheKey(token)).catch(() => false);
+export function deleteCachedSession(cookie: string): void {
+  delete sessions_cache[cookie];
 }

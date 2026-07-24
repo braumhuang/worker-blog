@@ -2,6 +2,7 @@ export const THEME_NAMES = {
   kehua: "Kehua",
   writecho: "Writecho",
   printer: "Printer",
+  vermillion: "Vermillion",
 } as const;
 
 export type ThemeName = keyof typeof THEME_NAMES;

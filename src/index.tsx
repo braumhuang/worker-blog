@@ -113,8 +113,14 @@ app.notFound(async (c) => {
           "SELECT * FROM blog_metas WHERE type='category' ORDER BY count DESC,name COLLATE NOCASE",
         )
       : [];
+    const tags = options.site_theme === "vermillion"
+      ? await dbAll<BlogMeta>(
+          c.env.BLOG_DB,
+          "SELECT * FROM blog_metas WHERE type='tag' ORDER BY count DESC,name COLLATE NOCASE LIMIT 60",
+        )
+      : [];
     return c.html(
-      <Base options={options} title="页面不存在" categories={categories}>
+      <Base options={options} title="页面不存在" categories={categories} tags={tags}>
         <NotFound />
       </Base>,
       404,
