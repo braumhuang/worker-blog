@@ -4,9 +4,11 @@ import { AdminLayout } from "./base";
 export function LinksPage({
   rows,
   edit,
+  imageCompressionQuality,
 }: {
   rows: BlogLink[];
   edit: BlogLink | null;
+  imageCompressionQuality: string;
 }) {
   return (
     <AdminLayout title="友链管理" subtitle={`${rows.length} 条友链`}>
@@ -95,6 +97,7 @@ export function LinksPage({
                     type="file"
                     accept="image/*"
                     data-icon-upload
+                    data-image-compression-quality={imageCompressionQuality}
                     hidden
                   />
                 </div>

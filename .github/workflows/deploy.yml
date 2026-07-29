@@ -66,6 +66,9 @@ jobs:
           binding = "BLOG_R2"
           bucket_name = "${{ vars.R2_NAME }}"
 
+          [[send_email]]
+          name = "BLOG_EMAIL"
+
           [assets]
           directory = "./static"
 

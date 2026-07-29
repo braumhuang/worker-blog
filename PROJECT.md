@@ -13,6 +13,7 @@
 ├── 静态资源请求 ─────────────→ Workers Static Assets
 ├── 前台动态页面 ─────────────→ Hono → D1
 ├── 后台管理请求 ─────────────→ Hono → sessions_cache / D1
+├── 评论提醒邮件 ─────────────→ BLOG_EMAIL → Cloudflare Destination Address
 ├── /uploads/* ───────────────→ Hono → R2
 └── CDN 文件地址 ─────────────→ R2 公共域名或外部 CDN
 ```
@@ -22,6 +23,7 @@
 ```text
 BLOG_DB        D1Database，业务数据库
 BLOG_R2        R2Bucket，上传文件存储
+BLOG_EMAIL     send_email，默认部署的评论提醒邮件发送绑定
 ADMIN_NAME     Worker Secret，后台用户名
 ADMIN_PSWD     Worker Secret，后台密码
 MAX_UPLOAD_MB  普通变量，后台单文件上传限制
@@ -38,7 +40,7 @@ src/routes/public.tsx          前台路由、公开内容查询、评论和 Ato
 src/routes/admin.tsx           后台路由、CRUD、上传、导入导出
 src/theme.ts                   主题名称、默认主题和静态资源路径
 src/types.ts                   运行时绑定与业务类型
-src/lib/                       数据库、认证、缓存、设置、导航等公共逻辑
+src/lib/                       数据库、认证、缓存、设置、导航、Emoji、评论提醒等公共逻辑
 src/views/admin/               后台 JSX 页面
 src/views/themes/theme.ts      前台主题组件注册表
 src/views/themes/<theme>/      各主题 JSX 组件
@@ -161,6 +163,7 @@ released <= 当前 Unix 时间
 - 标签；
 - 发布时间；
 - Markdown 预览；
+- 可配置的文字与图片 Emoji 表情；
 - 当前内容附件。
 
 ### 闪念
@@ -270,7 +273,11 @@ admin_memos_per_page        25
 admin_comments_per_page     20
 admin_attachments_per_page  30
 comments_enabled            false
+comment_notification_from   空
+comment_notification_to     空
 file_cdn_url                空
+image_compression_quality   80（1–100，100 表示不压缩）
+emoji_items                 默认 Emoji 列表，图片表情“滑稽”位于首项
 site_timezone               Asia/Shanghai
 favicon_text                B
 favicon_color               #999999
@@ -290,6 +297,29 @@ attachment_templates
 ```
 
 设置读取失败时使用规范化后的默认值。
+
+### 图片上传压缩
+
+后台的文章附件、封面、全局附件、头像和友链图标在上传前读取 `image_compression_quality`。值按 1–100 的整数规范化，默认 80，100 表示不压缩。实际浏览器压缩函数位于 `static/admin/image-compression.js`，由 `static/admin/admin.js` 的全部上传入口统一调用。
+
+JPEG、WebP、AVIF 使用浏览器编码器的质量参数；PNG 先根据质量值进行颜色量化，再保持 `image/png` 重新编码。只有输出 MIME 与原文件一致且结果更小时才替换上传文件；动画图片、不支持的格式或编码失败时上传原文件。上传状态会显示压缩前后的体积。
+
+### Emoji 表情
+
+Emoji 配置以 JSON 保存在 `blog_options.emoji_items`。设置页支持完整 JSON 数组，或每行一个 JSON 对象：
+
+```json
+[
+  {
+    "type": "url",
+    "name": "滑稽",
+    "value": "https://tb3.bdstatic.com/emoji/image_emoticon25@2x.png"
+  },
+  { "type": "str", "name": "酷", "value": "😎" }
+]
+```
+
+`url` 类型支持相对 URL 和 http/https 绝对 URL，插入编辑器时生成 `<img class="emoji" src="...">`；`str` 类型直接插入字符。
 
 ## 导航系统
 
@@ -501,6 +531,21 @@ RELATIVE_PATH
 
 后台支持评论列表、按内容筛选、编辑和删除。
 
+### 评论邮件提醒
+
+设置页在“开启评论功能”下方提供并排的：
+
+```text
+comment_notification_from   评论提醒发件邮箱
+comment_notification_to     评论提醒收件邮箱
+```
+
+两个值必须同时填写或同时留空，并使用统一邮箱格式规范化。收件邮箱必须是 Cloudflare 账户内已经验证的 Destination Address，发件邮箱必须属于已启用 Email Routing / Email Service 的域名。
+
+评论写入 `blog_comments` 成功后，仅当 `comment_notification_from` 与 `comment_notification_to` 同时存在时，`src/lib/comment-notification.ts` 才生成纯文本和 HTML 邮件，并通过默认部署的 `BLOG_EMAIL` binding 异步发送。邮件包含内容标题、评论者资料、评论正文和详情链接，`replyTo` 使用评论者邮箱。
+
+邮件发送通过 `executionCtx.waitUntil()` 执行。发送失败只写 Worker 日志，不回滚评论，也不改变访客看到的评论提交结果。
+
 ## 认证与安全
 
 - 后台账号从 Worker Secrets 读取。
@@ -585,7 +630,7 @@ R2 文件本体
 3 个分类
 10 个标签
 6 条友链
-24 项设置
+26 项设置
 ```
 
 Seed 只用于开发和演示，会先清理业务数据。
@@ -624,7 +669,16 @@ D1 绑定和远程 `schema.sql` 执行命令统一使用 `D1_NAME`。
 3. `npm install`；
 4. 动态生成 `wrangler.toml`；
 5. `wrangler-action@v3` 执行远程 `schema.sql`；
-6. `wrangler-action@v3` 设置后台 Secrets 并部署。
+6. `wrangler-action@v3` 设置后台 Secrets，并绑定 D1、R2、`BLOG_EMAIL` 后部署。
+
+工作流默认向生成的 `wrangler.toml` 加入：
+
+```toml
+[[send_email]]
+name = "BLOG_EMAIL"
+```
+
+是否实际发送由后台两个邮箱设置控制：只有发件邮箱和收件邮箱同时配置时，评论提交链路才调用邮件 binding。
 
 工作流当前不会自动执行：
 

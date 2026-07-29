@@ -4026,3 +4026,26 @@ video {
     aspect-ratio: 9 / 16;
   }
 }
+
+/* Inline image emoji */
+img.emoji {
+  display: inline !important;
+  width: auto;
+  height: 1.25em;
+  max-width: none;
+  margin: 0 0.06em;
+  vertical-align: -0.22em;
+  break-inside: avoid;
+}
+
+article .post-excerpt img.emoji,
+article .post-cover img.emoji,
+article .post-content img.emoji {
+  display: inline;
+  width: auto;
+  height: 1.25em;
+  max-width: none;
+  margin: 0 0.06em;
+  vertical-align: -0.22em;
+  break-inside: avoid;
+}

@@ -11,6 +11,13 @@ import {
   DEFAULT_ATTACHMENT_TEMPLATES,
   serializeAttachmentTemplates,
 } from "./attachment-templates";
+import {
+  DEFAULT_EMOJI_ITEMS,
+  normalizeEmojiItems,
+  serializeEmojiItems,
+} from "./emojis";
+import { normalizeImageCompressionQuality } from "./utils";
+import { normalizeNotificationEmail } from "./comment-notification";
 
 export const TIMEZONE_OPTIONS = [
   ["Pacific/Pago_Pago", "UTC−11:00 萨摩亚"],
@@ -86,7 +93,11 @@ export const DEFAULT_OPTIONS: OptionMap = {
   admin_comments_per_page: "20",
   admin_attachments_per_page: "30",
   file_cdn_url: "",
+  image_compression_quality: "80",
+  emoji_items: serializeEmojiItems(DEFAULT_EMOJI_ITEMS),
   comments_enabled: "false",
+  comment_notification_from: "",
+  comment_notification_to: "",
   navigation_menu: serializeNavigationItems(DEFAULT_NAVIGATION_ITEMS),
   attachment_templates: serializeAttachmentTemplates(
     DEFAULT_ATTACHMENT_TEMPLATES,
@@ -115,7 +126,19 @@ function normalizeOptions(stored: OptionMap): OptionMap {
     options.site_timezone = DEFAULT_OPTIONS.site_timezone;
   options.comments_enabled =
     options.comments_enabled === "true" ? "true" : "false";
+  options.comment_notification_from = normalizeNotificationEmail(
+    options.comment_notification_from,
+  );
+  options.comment_notification_to = normalizeNotificationEmail(
+    options.comment_notification_to,
+  );
   options.file_cdn_url = normalizeFileCdnUrl(options.file_cdn_url);
+  options.image_compression_quality = String(
+    normalizeImageCompressionQuality(options.image_compression_quality),
+  );
+  options.emoji_items = serializeEmojiItems(
+    normalizeEmojiItems(options.emoji_items),
+  );
   return options;
 }
 

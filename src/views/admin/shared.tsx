@@ -2,6 +2,7 @@ import type {
   AttachmentInfo,
   AttachmentTemplate,
   BlogContent,
+  EmojiItem,
   NavigationItem,
   NavigationSection,
 } from "../../types";
@@ -9,7 +10,7 @@ import { attachmentTemplateTypeForMime } from "../../lib/attachment-templates";
 import { navigationItemRules } from "../../lib/navigation";
 import { fileKind, publicAttachmentUrl } from "../../lib/utils";
 
-export function EditorToolbar() {
+export function EditorToolbar({ emojis }: { emojis: EmojiItem[] }) {
   const buttons = [
     ["bold", "B", "粗体"],
     ["italic", "I", "斜体"],
@@ -23,9 +24,10 @@ export function EditorToolbar() {
     ["image", "▧", "图片"],
     ["more", "…", "摘要分隔"],
     ["hr", "—", "分割线"],
+    ["emoji", "☺︎", "Emoji表情"],
   ];
   return (
-    <div class="md-toolbar">
+    <div class="md-toolbar" data-emojis={JSON.stringify(emojis)}>
       {buttons.map(([action, label, title]) => (
         <button type="button" data-md-action={action} title={title}>
           {label}

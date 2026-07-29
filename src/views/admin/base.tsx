@@ -100,8 +100,18 @@ export function AdminLayout({
           {children}
         </main>
         <footer class="admin-footer">
-          <p>Powered by Worker Blog</p>
+          <p>
+            Powered by{" "}
+            <a
+              href="https://github.com/braumhuang/worker-blog"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Worker Blog
+            </a>
+          </p>
         </footer>
+        <script src="/admin/image-compression.js" defer></script>
         <script src="/admin/admin.js" defer></script>
       </body>
     </html>

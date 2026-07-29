@@ -10,9 +10,11 @@
 - Markdown 编辑、预览、快捷格式按钮和文章封面
 - 分类、标签、归档、全文搜索和 Atom 订阅
 - 文章及页面评论，前后台独立分页
+- 基于 Cloudflare Destination Addresses 的新评论邮件提醒
 - 前台导航管理，自带菜单与新增菜单分组
 - 友链管理
-- R2 附件上传、文章附件关联和附件模板
+- R2 附件上传、图片上传压缩、文章附件关联和附件模板
+- 编辑器 Emoji 表情配置与图片表情插入
 - JSON 数据导入、导出
 - Kehua、Writecho、Printer、Vermillion、ChatGPT 五套前台主题
 - 后台登录会话和站点设置缓存
@@ -25,6 +27,7 @@
 - TypeScript
 - Cloudflare D1
 - Cloudflare R2
+- Cloudflare Email Routing / Email Service
 - Workers Static Assets
 - Worker 实例内存缓存
 - Marked
@@ -43,7 +46,9 @@ src/
 │   ├── attachment-templates.ts    附件模板
 │   ├── auth.ts                    后台认证与会话
 │   ├── cache.ts                   options_cache、sessions_cache
+│   ├── comment-notification.ts    评论提醒邮箱校验与邮件内容
 │   ├── db.ts                      D1 查询封装
+│   ├── emojis.ts                  Emoji 默认值、校验和序列化
 │   ├── favicon.ts                 动态 Favicon
 │   ├── markdown.ts                Markdown 渲染
 │   ├── navigation.ts              前台导航配置
@@ -64,7 +69,8 @@ src/
 static/
 ├── admin/
 │   ├── admin.css
-│   └── admin.js
+│   ├── admin.js
+│   └── image-compression.js       浏览器端图片压缩工具
 ├── kehua/
 ├── writecho/
 ├── printer/
@@ -155,6 +161,18 @@ static/<theme>/
 6. 执行 `npm run typecheck`。
 7. 在后台“设置 → 站点主题”中切换并检查全部前台页面。
 
+## 图片上传压缩实现
+
+后台图片上传在浏览器端、写入 R2 之前执行。`static/admin/image-compression.js` 提供实际压缩函数，`static/admin/admin.js` 在文章附件、封面、全局附件、头像和友链图标上传流程中统一调用。
+
+- 设置值为 `1–100` 的整数，默认 `80`，`100` 直接上传原图；
+- JPEG、WebP、AVIF 使用浏览器对应编码器的质量参数；
+- PNG 因浏览器编码器通常忽略 `quality`，会先按质量值降低颜色精度，再重新编码为 PNG；
+- 输出 MIME 类型与原文件不同、图片为动画、浏览器不支持重新编码或压缩后没有变小时，继续上传原文件；
+- 上传状态会显示压缩前后的文件体积，便于确认压缩是否实际生效。
+
+图片尺寸和文件扩展名保持不变；GIF 等无法在浏览器中可靠保持动画与原类型的格式不会强制转换。
+
 ## GitHub Actions 一键部署
 
 工作流位于：
@@ -171,7 +189,7 @@ static/<theme>/
 4. 根据 GitHub Variables 生成临时 `wrangler.toml`。
 5. 对远程 D1 执行 `schema.sql`。
 6. 写入 `ADMIN_NAME`、`ADMIN_PSWD` Secrets。
-7. 部署 Worker、Static Assets，并绑定 D1 和 R2。
+7. 部署 Worker、Static Assets，并默认绑定 D1、R2 与 `BLOG_EMAIL` 发信服务。
 
 生产工作流不会执行 `seed.sql`。
 
@@ -191,7 +209,8 @@ static/<theme>/
 
 - 一个 D1 数据库；
 - 一个 R2 Bucket；
-- 一个用于 GitHub Actions 的 API Token。
+- 一个用于 GitHub Actions 的 API Token；
+- 启用评论提醒时，一个由 Cloudflare DNS 托管、用于发件地址的域名。
 
 记录 D1 数据库名称、D1 ID 和 R2 Bucket 名称。
 
@@ -292,7 +311,113 @@ Cloudflare Custom Domains 文档：
 
 - <https://developers.cloudflare.com/workers/configuration/routing/custom-domains/>
 
-### 7. 运行部署
+### 7. 配置评论邮件提醒
+
+评论提醒使用 Cloudflare 的 `send_email` Worker Binding，并把后台配置的收件邮箱作为 Cloudflare **Destination Address** 使用。`wrangler.toml` 和 GitHub Actions 生成的部署配置默认包含 `BLOG_EMAIL` 绑定；只有后台同时填写“评论提醒发件邮箱”和“评论提醒收件邮箱”时，评论提交代码才会尝试发送邮件。
+
+实际启用的绑定为：
+
+```toml
+[[send_email]]
+name = "BLOG_EMAIL"
+```
+
+由于收件邮箱由后台设置决定，绑定没有写死 `destination_address`；Cloudflare 仍会校验目标邮箱必须是当前账户中已经验证的 Destination Address。两个后台邮箱任意一个留空时，评论只写入 D1，不调用 `BLOG_EMAIL.send()`。
+
+#### 7.1 前置条件
+
+- 发件域名必须使用 Cloudflare DNS；
+- 发件域名需要启用 Email Routing 或完成 Email Service 域名接入；
+- 收件邮箱必须在当前 Cloudflare 账户中添加为 Destination Address 并完成验证；
+- 后台的“评论提醒发件邮箱”和“评论提醒收件邮箱”需要同时填写。
+
+发送到已验证 Destination Address 的邮件不计入 Cloudflare Email Service 的月度和每日发送额度；仅启用 Email Routing 时也可以使用。
+
+#### 7.2 在 Cloudflare 启用 Email Routing
+
+1. 登录 Cloudflare Dashboard。
+2. 进入：
+
+   ```text
+   Compute → Email Service → Email Routing
+   ```
+
+3. 点击 **Onboard Domain**，选择博客发件邮箱所属域名，例如 `example.com`。
+4. 确认 Cloudflare 添加或提示添加的 MX、SPF 和 DKIM DNS 记录。
+5. 等待域名状态变为可用。Cloudflare DNS 下通常几分钟完成，全球 DNS 传播最长可能需要 24 小时。
+
+发件邮箱可以使用该域名下的地址，例如：
+
+```text
+notify@example.com
+```
+
+后台填写的发件邮箱必须属于已经接入的域名，不要填写 Gmail、QQ 邮箱等外部域名作为发件邮箱。
+
+#### 7.3 添加并验证 Destination Address
+
+1. 在 Cloudflare Dashboard 进入：
+
+   ```text
+   Compute → Email Service → Email Routing → Destination Addresses
+   ```
+
+2. 输入实际接收评论提醒的邮箱，例如 `owner@example.net`。
+3. 打开 Cloudflare 发到该邮箱的验证邮件。
+4. 点击验证链接，确认状态显示为 **Verified**。
+
+Destination Addresses 在 Cloudflare 账户级别管理，同一账户中的多个域名和 Worker 可以复用。后台填写未验证的收件邮箱时，Cloudflare 会拒绝发送。
+
+#### 7.4 部署 Email Binding
+
+项目默认在 `wrangler.toml` 和 GitHub Actions 动态生成的配置中加入下面的绑定：
+
+```toml
+[[send_email]]
+name = "BLOG_EMAIL"
+```
+
+GitHub Actions 用户直接重新运行部署工作流即可：
+
+```text
+Actions → Deploy Worker → Run workflow
+```
+
+手动部署用户确认 `wrangler.toml` 中存在该配置后执行 `npm run deploy`。不需要创建 API Key、SMTP 密码或新的 Worker Secret。若暂时不使用评论提醒，后台两个提醒邮箱保持为空即可，代码不会尝试发信。
+
+#### 7.5 在博客后台填写邮箱
+
+登录博客后台，进入：
+
+```text
+设置 → 开启评论功能
+```
+
+在其下方填写：
+
+| 设置             | 示例                 | 要求                                                |
+| ---------------- | -------------------- | --------------------------------------------------- |
+| 评论提醒发件邮箱 | `notify@example.com` | 必须属于已启用 Email Routing / Email Service 的域名 |
+| 评论提醒收件邮箱 | `owner@example.net`  | 必须是已验证的 Cloudflare Destination Address       |
+
+保存后发布一条测试评论。提醒邮件包含文章标题、评论者姓名、邮箱、网站、评论正文和评论链接。评论会先写入 D1，邮件在后台异步发送；邮件发送失败不会导致访客评论提交失败，可在 Worker Logs 中查看 `发送评论提醒邮件失败` 日志。
+
+#### 7.6 常见问题
+
+- **评论保存但没有邮件**：检查两个邮箱是否都已填写、Worker 是否存在 `BLOG_EMAIL` 绑定，并查看 Worker Logs。
+- **Destination address is not allowed / not verified**：到 Destination Addresses 页面完成收件邮箱验证。
+- **Sender is not allowed**：发件邮箱不属于已接入 Cloudflare Email 的域名，或域名 DNS 配置尚未生效。
+- **测试邮件进入垃圾箱**：检查垃圾邮件目录，并确认发件域名的 SPF、DKIM、DMARC 状态。
+- **本地开发无法发送**：默认本地配置不会连接真实邮件服务；建议部署到 Cloudflare 后测试，避免开发时误发邮件。
+
+Cloudflare 官方文档：
+
+- <https://developers.cloudflare.com/email-service/get-started/route-emails/>
+- <https://developers.cloudflare.com/email-service/configuration/send-bindings/>
+- <https://developers.cloudflare.com/email-service/api/send-emails/workers-api/>
+- <https://developers.cloudflare.com/email-service/platform/limits/>
+
+### 8. 运行部署
 
 进入 Fork 后仓库：
 
@@ -302,7 +427,7 @@ Actions → Deploy Worker → Run workflow
 
 项目使用完整 `schema.sql`，不使用 migrations。工作流每次都会执行 `CREATE TABLE IF NOT EXISTS` 和索引、触发器定义，但不会自动修改已经存在且结构不兼容的旧表。
 
-### 8. 后台设置推荐
+### 9. 后台设置推荐
 
 首次部署并登录后台后，建议配置 **文件 CDN 域名**，例如 R2 Bucket 的自定义公开域名：
 
@@ -436,7 +561,12 @@ database_id = "你的 D1 ID"
 [[r2_buckets]]
 binding = "BLOG_R2"
 bucket_name = "worker-blog-assets"
+
+[[send_email]]
+name = "BLOG_EMAIL"
 ```
+
+项目默认保留 `send_email` 段。未在后台同时配置两个提醒邮箱时，评论流程不会调用邮件 binding。
 
 ### 3. 可选：配置自定义域名
 

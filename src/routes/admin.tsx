@@ -42,6 +42,8 @@ import {
   normalizeAttachmentTemplateType,
   serializeAttachmentTemplates,
 } from "../lib/attachment-templates";
+import { parseEmojiItems, serializeEmojiItems } from "../lib/emojis";
+import { normalizeNotificationEmail } from "../lib/comment-notification";
 import {
   attachmentInfo,
   attachmentPath,
@@ -49,6 +51,7 @@ import {
   formatDate,
   insertionForAttachment,
   intValue,
+  normalizeImageCompressionQuality,
   nowSeconds,
   parseDatetimeLocal,
   positiveInt,
@@ -627,6 +630,7 @@ adminRoutes.get("/admin/attachments", async (c) => {
       page={page}
       total={total}
       perPage={perPage}
+      imageCompressionQuality={options.image_compression_quality}
     />,
   );
 });
@@ -875,6 +879,7 @@ adminRoutes.post("/admin/comment/:id/delete", async (c) => {
 });
 
 adminRoutes.get("/admin/links", async (c) => {
+  const options = await getOptions(c.env.BLOG_DB);
   const editId = intValue(c.req.query("edit"));
   const edit = editId
     ? await dbFirst<BlogLink>(
@@ -887,7 +892,13 @@ adminRoutes.get("/admin/links", async (c) => {
     c.env.BLOG_DB,
     'SELECT id, name, url, icon, info, "order" AS "order" FROM blog_links ORDER BY "order" DESC, id DESC',
   );
-  return c.html(<LinksPage rows={rows} edit={edit} />);
+  return c.html(
+    <LinksPage
+      rows={rows}
+      edit={edit}
+      imageCompressionQuality={options.image_compression_quality}
+    />,
+  );
 });
 
 adminRoutes.post("/admin/links", async (c) => {
@@ -1124,6 +1135,10 @@ adminRoutes.post("/admin/options", async (c) => {
     "admin_comments_per_page",
     "admin_attachments_per_page",
     "file_cdn_url",
+    "image_compression_quality",
+    "emoji_items",
+    "comment_notification_from",
+    "comment_notification_to",
     "about_avatar",
     "about_github",
     "about_x",
@@ -1140,6 +1155,22 @@ adminRoutes.post("/admin/options", async (c) => {
   values.site_theme = normalizeThemeName(values.site_theme);
   values.comments_enabled =
     form.get("comments_enabled") === "true" ? "true" : "false";
+  const notificationFromInput = values.comment_notification_from.trim();
+  const notificationToInput = values.comment_notification_to.trim();
+  values.comment_notification_from = normalizeNotificationEmail(
+    notificationFromInput,
+  );
+  values.comment_notification_to =
+    normalizeNotificationEmail(notificationToInput);
+  if (notificationFromInput && !values.comment_notification_from)
+    return c.text("评论提醒发件邮箱格式不正确。", 400);
+  if (notificationToInput && !values.comment_notification_to)
+    return c.text("评论提醒收件邮箱格式不正确。", 400);
+  if (
+    Boolean(values.comment_notification_from) !==
+    Boolean(values.comment_notification_to)
+  )
+    return c.text("评论提醒发件邮箱和收件邮箱需要同时填写或同时留空。", 400);
   values.posts_per_page = String(positiveInt(values.posts_per_page, 10, 100));
   values.memos_per_page = String(positiveInt(values.memos_per_page, 20, 100));
   values.archives_per_page = String(
@@ -1160,6 +1191,19 @@ adminRoutes.post("/admin/options", async (c) => {
   values.admin_attachments_per_page = String(
     positiveInt(values.admin_attachments_per_page, 30, 100),
   );
+  values.image_compression_quality = String(
+    normalizeImageCompressionQuality(values.image_compression_quality),
+  );
+  try {
+    values.emoji_items = serializeEmojiItems(
+      parseEmojiItems(values.emoji_items),
+    );
+  } catch (error) {
+    return c.text(
+      `Emoji表情配置无效：${error instanceof Error ? error.message : "请检查 JSON 格式"}`,
+      400,
+    );
+  }
   const fileCdnInput = values.file_cdn_url.trim();
   values.file_cdn_url = normalizeFileCdnUrl(fileCdnInput);
   if (fileCdnInput && !values.file_cdn_url)

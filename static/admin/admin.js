@@ -67,6 +67,95 @@
     hr: () => insertText("\n---\n"),
   };
 
+  function escapeHtmlAttribute(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
+
+  function emojisFor(toolbar) {
+    try {
+      const parsed = JSON.parse(toolbar?.dataset.emojis || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function showEmojiPicker(trigger) {
+    const emojis = emojisFor(trigger.closest("[data-emojis]"));
+    if (!emojis.length) {
+      alert("请先在后台设置中配置 Emoji表情");
+      return;
+    }
+    const backdrop = document.createElement("div");
+    backdrop.className = "emoji-picker-backdrop";
+    const dialog = document.createElement("section");
+    dialog.className = "emoji-picker-dialog";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-label", "选择 Emoji表情");
+    const head = document.createElement("div");
+    head.className = "emoji-picker-head";
+    const title = document.createElement("strong");
+    title.textContent = "Emoji表情";
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "emoji-picker-close";
+    close.setAttribute("aria-label", "关闭");
+    close.textContent = "×";
+    head.append(title, close);
+    const grid = document.createElement("div");
+    grid.className = "emoji-picker-grid";
+    const finish = () => {
+      document.removeEventListener("keydown", onKeydown);
+      backdrop.remove();
+      trigger.focus();
+    };
+    const onKeydown = (event) => {
+      if (event.key === "Escape") finish();
+    };
+    emojis.forEach((item) => {
+      if (!item || !["url", "str"].includes(item.type) || !item.value) return;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "emoji-picker-item";
+      button.title = item.name || "Emoji";
+      if (item.type === "url") {
+        const image = document.createElement("img");
+        image.src = item.value;
+        image.alt = item.name || "";
+        image.loading = "lazy";
+        button.append(image);
+      } else {
+        button.textContent = item.value;
+      }
+      button.addEventListener("click", () => {
+        const insertion =
+          item.type === "url"
+            ? '<img class="emoji" src="' +
+              escapeHtmlAttribute(item.value) +
+              '">'
+            : item.value;
+        insertRawText(insertion);
+        finish();
+        editor?.focus();
+      });
+      grid.append(button);
+    });
+    dialog.append(head, grid);
+    backdrop.append(dialog);
+    document.body.append(backdrop);
+    document.addEventListener("keydown", onKeydown);
+    close.addEventListener("click", finish);
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) finish();
+    });
+    grid.querySelector("button")?.focus();
+  }
+
   const fallbackTemplates = {
     image: "![FILE_NAME](RELATIVE_PATH)",
     video:
@@ -168,7 +257,8 @@
     if (button) {
       event.preventDefault();
       const action = button.dataset.mdAction;
-      if (actions[action]) actions[action]();
+      if (action === "emoji") showEmojiPicker(button);
+      else if (actions[action]) actions[action]();
     }
     if (event.target.closest("[data-fullscreen]")) {
       event.preventDefault();
@@ -215,6 +305,34 @@
     clearTimeout(previewTimer);
     previewTimer = setTimeout(renderPreview, 260);
   });
+
+  function imageCompressionQuality(input) {
+    const value = input?.dataset.imageCompressionQuality || "80";
+    return window.WorkerBlogImageCompression?.normalizeQuality(value, 80) ?? 80;
+  }
+
+  async function prepareUploadFile(file, input) {
+    const compressor = window.WorkerBlogImageCompression;
+    if (!compressor) return file;
+    return compressor.compressImageFile(file, imageCompressionQuality(input));
+  }
+
+  function formatUploadBytes(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function compressionNote(original, prepared) {
+    if (prepared === original || prepared.size >= original.size) return "";
+    return (
+      "（已压缩 " +
+      formatUploadBytes(original.size) +
+      " → " +
+      formatUploadBytes(prepared.size) +
+      "）"
+    );
+  }
 
   const fileInput = $("[data-upload-input]");
   const uploadStatus = $("[data-upload-status]");
@@ -272,8 +390,12 @@
         uploadStatus.style.display = "block";
         uploadStatus.textContent = "正在上传 " + file.name + "…";
       }
+      const uploadFile = await prepareUploadFile(file, fileInput);
+      if (uploadStatus)
+        uploadStatus.textContent =
+          "正在上传 " + file.name + compressionNote(file, uploadFile) + "…";
       const body = new FormData();
-      body.append("file", file);
+      body.append("file", uploadFile);
       body.append("cid", cid || "");
       const response = await fetch("/admin/api/attachments", {
         method: "POST",
@@ -299,8 +421,12 @@
     const file = coverUpload.files?.[0];
     if (!file) return;
     if (coverStatus) coverStatus.textContent = "正在上传 " + file.name + "…";
+    const uploadFile = await prepareUploadFile(file, coverUpload);
+    if (coverStatus)
+      coverStatus.textContent =
+        "正在上传 " + file.name + compressionNote(file, uploadFile) + "…";
     const body = new FormData();
-    body.append("file", file);
+    body.append("file", uploadFile);
     body.append("cid", coverUpload.dataset.cid || "");
     try {
       const response = await fetch("/admin/api/attachments", {
@@ -385,8 +511,12 @@
     const file = input.files?.[0];
     if (!file) return;
     if (status) status.textContent = "正在上传 " + file.name + "…";
+    const uploadFile = await prepareUploadFile(file, input);
+    if (status)
+      status.textContent =
+        "正在上传 " + file.name + compressionNote(file, uploadFile) + "…";
     const body = new FormData();
-    body.append("file", file);
+    body.append("file", uploadFile);
     try {
       const response = await fetch("/admin/api/attachments", {
         method: "POST",

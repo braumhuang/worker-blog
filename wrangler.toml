@@ -16,5 +16,8 @@ database_id = "00000000-0000-0000-0000-000000000000"
 binding = "BLOG_R2"
 bucket_name = "worker-blog-assets"
 
+[[send_email]]
+name = "BLOG_EMAIL"
+
 [assets]
 directory = "./static"

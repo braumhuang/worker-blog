@@ -22,6 +22,15 @@ export function intValue(value: unknown, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+export function normalizeImageCompressionQuality(
+  value: unknown,
+  fallback = 80,
+): number {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(parsed, 100);
+}
+
 export function slugify(input: string): string {
   const slug = input
     .trim()

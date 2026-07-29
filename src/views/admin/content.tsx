@@ -5,6 +5,7 @@ import type {
   OptionMap,
 } from "../../types";
 import { datetimeLocal, formatDate } from "../../lib/utils";
+import { normalizeEmojiItems } from "../../lib/emojis";
 import { AdminLayout } from "./base";
 import { AttachmentRows, EditorToolbar } from "./shared";
 
@@ -101,6 +102,9 @@ export function ContentEditPage({
                     accept="image/*"
                     data-cover-upload
                     data-cid={content.cid}
+                    data-image-compression-quality={
+                      options.image_compression_quality
+                    }
                     hidden
                   />
                 </div>
@@ -114,7 +118,7 @@ export function ContentEditPage({
             </div>
           )}
           <div class="editor-panel" data-editor-panel>
-            <EditorToolbar />
+            <EditorToolbar emojis={normalizeEmojiItems(options.emoji_items)} />
             <div class="editor-workspace">
               <textarea class="editor-textarea" name="text" data-editor>
                 {content.text}
@@ -227,6 +231,9 @@ export function ContentEditPage({
                 id="content-upload"
                 data-upload-input
                 data-cid={content.cid}
+                data-image-compression-quality={
+                  options.image_compression_quality
+                }
                 type="file"
                 multiple
                 hidden

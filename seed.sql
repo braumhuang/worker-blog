@@ -8672,6 +8672,8 @@ INSERT INTO blog_options("key",value) VALUES
 ('admin_attachments_per_page','30'),
 ('file_cdn_url',''),
 ('comments_enabled','true'),
+('comment_notification_from',''),
+('comment_notification_to',''),
 ('navigation_menu','[{"id":"home","name":"首页","url":"/","visible":true,"section":"fixed","order":10},{"id":"memos","name":"闪念","url":"/memos","visible":true,"section":"fixed","order":20},{"id":"archives","name":"归档","url":"/archives","visible":true,"section":"fixed","order":30},{"id":"categories","name":"分类","url":"/categories","visible":false,"section":"fixed","order":40},{"id":"tags","name":"标签","url":"/tags","visible":true,"section":"fixed","order":50},{"id":"links","name":"友链","url":"/links","visible":true,"section":"fixed","order":60},{"id":"about","name":"关于","url":"/post/about","visible":true,"section":"custom","template":"about","order":10}]'),
 ('attachment_templates','[{"id":"default-image","name":"图片","type":"image","template":"![FILE_NAME](RELATIVE_PATH)"},{"id":"default-video","name":"视频","type":"video","template":"<video controls preload=\"metadata\" src=\"RELATIVE_PATH\">FILE_NAME</video>"},{"id":"default-file","name":"文件","type":"file","template":"[FILE_NAME](RELATIVE_PATH)"}]'),
 ('footer_info','<a href="https://github.com/Gridea-Pro/gridea-pro-themes/tree/main/themes/kehua" target="_blank" rel="noopener noreferrer">Kehua</a>'),

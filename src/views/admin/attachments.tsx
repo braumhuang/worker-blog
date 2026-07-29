@@ -13,6 +13,7 @@ export function AttachmentsPage({
   page,
   total,
   perPage,
+  imageCompressionQuality,
 }: {
   rows: Array<{ content: BlogContent; info: AttachmentInfo }>;
   fileCdnUrl: string;
@@ -20,6 +21,7 @@ export function AttachmentsPage({
   page: number;
   total: number;
   perPage: number;
+  imageCompressionQuality: string;
 }) {
   return (
     <AdminLayout
@@ -33,6 +35,7 @@ export function AttachmentsPage({
           <input
             id="global-upload"
             data-upload-input
+            data-image-compression-quality={imageCompressionQuality}
             type="file"
             multiple
             hidden

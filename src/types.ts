@@ -2,6 +2,26 @@ export type ContentType = "post" | "page" | "atta" | "memo";
 export type ContentStatus = "publish" | "draft" | "hidden";
 export type MetaType = "tag" | "category";
 export type AttachmentTemplateType = "image" | "video" | "file";
+export type EmojiType = "url" | "str";
+
+export type EmailAddress = {
+  email: string;
+  name?: string;
+};
+
+export type EmailMessageInput = {
+  to: string | EmailAddress | Array<string | EmailAddress>;
+  from: string | EmailAddress;
+  subject: string;
+  html?: string;
+  text?: string;
+  replyTo?: string | EmailAddress;
+  headers?: Record<string, string>;
+};
+
+export interface EmailSendBinding {
+  send(message: EmailMessageInput): Promise<{ messageId?: string }>;
+}
 
 export type Bindings = {
   BLOG_DB: D1Database;
@@ -9,6 +29,7 @@ export type Bindings = {
   ADMIN_NAME: string;
   ADMIN_PSWD: string;
   MAX_UPLOAD_MB?: string;
+  BLOG_EMAIL: EmailSendBinding;
 };
 
 export type Variables = {
@@ -82,12 +103,27 @@ export interface AttachmentTemplate {
   template: string;
 }
 
+export interface EmojiItem {
+  type: EmojiType;
+  name: string;
+  value: string;
+}
+
 export interface AttachmentInfo {
   key: string;
   url: string;
   mime: string;
   size: number;
   originalName: string;
+}
+
+export interface CommentNotificationPayload {
+  from: string;
+  to: string;
+  siteTitle: string;
+  content: BlogContent;
+  commenter: Pick<BlogComment, "name" | "email" | "site" | "text">;
+  commentUrl: string;
 }
 
 export type OptionMap = Record<string, string>;

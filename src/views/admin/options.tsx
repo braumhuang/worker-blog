@@ -1,5 +1,6 @@
 import type { OptionMap } from "../../types";
 import { TIMEZONE_OPTIONS } from "../../lib/options";
+import { formatEmojiItems, normalizeEmojiItems } from "../../lib/emojis";
 import { THEME_OPTIONS } from "../../theme";
 import { AdminLayout } from "./base";
 
@@ -107,6 +108,23 @@ export function OptionsPage({
                 R2；填写后直接使用该域名+相对路径。
               </small>
             </div>
+            <div class="field">
+              <label for="image_compression_quality">图片上传压缩率</label>
+              <input
+                class="input"
+                id="image_compression_quality"
+                name="image_compression_quality"
+                type="number"
+                min="1"
+                max="100"
+                step="1"
+                value={options.image_compression_quality}
+              />
+              <small class="muted">
+                请输入 1–100 的整数，默认 80；100
+                表示不压缩。图片压缩后保持原文件类型。
+              </small>
+            </div>
             <div class="settings-inline settings-four-columns">
               <div class="field">
                 <label>前台文章分页数</label>
@@ -199,6 +217,22 @@ export function OptionsPage({
                 />
               </div>
             </div>
+            <div class="field">
+              <label for="emoji_items">Emoji表情</label>
+              <textarea
+                class="textarea emoji-settings-textarea"
+                id="emoji_items"
+                name="emoji_items"
+                rows={10}
+              >
+                {formatEmojiItems(normalizeEmojiItems(options.emoji_items))}
+              </textarea>
+              <small class="muted">
+                支持相对 URL 和 http/https 绝对 URL。可填写完整 JSON
+                数组，或每行一个 JSON 对象；type 为 url 时插入图片，type 为 str
+                时插入文字。
+              </small>
+            </div>
             <div class="field option-check">
               <label>
                 <input
@@ -212,6 +246,38 @@ export function OptionsPage({
               <small class="muted">
                 开启后，文章详情以及页面/关于模板内容会显示评论输入框与评论列表。
               </small>
+            </div>
+            <div class="settings-inline">
+              <div class="field">
+                <label for="comment_notification_from">评论提醒发件邮箱</label>
+                <input
+                  class="input"
+                  id="comment_notification_from"
+                  name="comment_notification_from"
+                  type="email"
+                  value={options.comment_notification_from}
+                  placeholder="notify@blog.example.com"
+                />
+                <small class="muted">
+                  必须属于已在 Cloudflare Email Routing / Email Service
+                  中启用的域名。
+                </small>
+              </div>
+              <div class="field">
+                <label for="comment_notification_to">评论提醒收件邮箱</label>
+                <input
+                  class="input"
+                  id="comment_notification_to"
+                  name="comment_notification_to"
+                  type="email"
+                  value={options.comment_notification_to}
+                  placeholder="owner@example.com"
+                />
+                <small class="muted">
+                  必须先添加为 Cloudflare Destination Address
+                  并完成验证；两个邮箱同时填写后启用提醒。
+                </small>
+              </div>
             </div>
             <div class="field">
               <label for="about-avatar">头像 URL</label>
@@ -232,6 +298,9 @@ export function OptionsPage({
                   type="file"
                   accept="image/*"
                   data-avatar-upload
+                  data-image-compression-quality={
+                    options.image_compression_quality
+                  }
                   hidden
                 />
               </div>

@@ -25,6 +25,7 @@ import {
   resolveUploadedUrls,
 } from "../lib/utils";
 import { getThemeComponents } from "../views/themes/theme";
+import { sendCommentNotification } from "../lib/comment-notification";
 
 type CommentPageData = {
   comments: BlogComment[];
@@ -416,6 +417,26 @@ publicRoutes.post("/post/:slug/comments", async (c) => {
     nowSeconds(),
     content.cid,
   );
+  const commentNotificationEnabled = Boolean(
+    options.comment_notification_from && options.comment_notification_to,
+  );
+  if (commentNotificationEnabled) {
+    const commentUrl = `${new URL(c.req.url).origin}/post/${encodeURIComponent(
+      content.slug,
+    )}/#comments`;
+    c.executionCtx.waitUntil(
+      sendCommentNotification(c.env.BLOG_EMAIL, {
+        from: options.comment_notification_from,
+        to: options.comment_notification_to,
+        siteTitle: options.site_title,
+        content,
+        commenter: { name, email, site, text },
+        commentUrl,
+      }).catch((error) => {
+        console.error("发送评论提醒邮件失败。", error);
+      }),
+    );
+  }
   if (c.req.header("X-Requested-With") === "comments") {
     const commentData = await commentsForContent(c, content, options);
     return c.html(
