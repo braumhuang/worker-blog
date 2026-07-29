@@ -342,13 +342,10 @@ kehua    Kehua
 writecho Writecho
 printer  Printer
 vermillion Vermillion
-simplecho Simplecho
 chatgpt  ChatGPT
 ```
 
 `vermillion` 使用独立的 `src/views/themes/vermillion/` 组件目录与 `static/vermillion/` 静态资源目录。其页面结构以宣纸期刊为核心，左侧 rail 同时承载导航、标签和社交入口；首页包含卷首、朱砂印章和分栏文章卡；文章页包含目录、阅读进度、代码复制与回到顶部；闪念页使用服务端生成的年度活动热力图。
-
-`simplecho` 使用 `src/views/themes/simplecho/` 与 `static/simplecho/`。主题采用 1000px 居中容器、左文右图文章卡和 `# 分类 # 标签` 元信息，提供银光灰、简约白、墨草绿、暗夜黑四套配色；前台 JavaScript 负责配色持久化、自动深色、移动导航、搜索、阅读进度、代码复制、评论异步提交和返回顶部。归档、分类、标签、友链、闪念、关于、评论和 404 均使用同一视觉体系。
 
 `chatgpt` 使用 `src/views/themes/chatgpt/` 与 `static/chatgpt/`。主题将博客页面组织成用户提问与站长回答的消息流，左侧固定栏承载菜单、站内搜索、最近文章和站点资料；顶部支持侧栏收起与深浅模式，底部输入框调用 `/api/search` 进行对话式搜索。文章、归档、分类、标签、友链、闪念、关于、评论和 404 均使用同一套 ChatGPT 风格组件，移动端侧栏自动切换为抽屉。
 

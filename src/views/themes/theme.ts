@@ -55,20 +55,6 @@ import { Post as VermillionPost } from "./vermillion/post";
 import { Tag as VermillionTag } from "./vermillion/tag";
 import { Tags as VermillionTags } from "./vermillion/tags";
 import { Comments as VermillionComments } from "./vermillion/partials/comments";
-import { NotFound as SimplechoNotFound } from "./simplecho/404";
-import { About as SimplechoAbout } from "./simplecho/about";
-import { Archives as SimplechoArchives } from "./simplecho/archives";
-import { Base as SimplechoBase } from "./simplecho/base";
-import { Categories as SimplechoCategories } from "./simplecho/categories";
-import { Category as SimplechoCategory } from "./simplecho/category";
-import { Index as SimplechoIndex } from "./simplecho/index";
-import { Links as SimplechoLinks } from "./simplecho/links";
-import { Memos as SimplechoMemos } from "./simplecho/memos";
-import { Page as SimplechoPage } from "./simplecho/page";
-import { Post as SimplechoPost } from "./simplecho/post";
-import { Tag as SimplechoTag } from "./simplecho/tag";
-import { Tags as SimplechoTags } from "./simplecho/tags";
-import { Comments as SimplechoComments } from "./simplecho/partials/comments";
 import { NotFound as ChatGPTNotFound } from "./chatgpt/404";
 import { About as ChatGPTAbout } from "./chatgpt/about";
 import { Archives as ChatGPTArchives } from "./chatgpt/archives";
@@ -147,22 +133,6 @@ const themes = {
     Post: VermillionPost,
     Tag: VermillionTag,
     Tags: VermillionTags,
-  },
-  simplecho: {
-    NotFound: SimplechoNotFound,
-    About: SimplechoAbout,
-    Archives: SimplechoArchives,
-    Base: SimplechoBase,
-    Categories: SimplechoCategories,
-    Category: SimplechoCategory,
-    Comments: SimplechoComments,
-    Index: SimplechoIndex,
-    Links: SimplechoLinks,
-    Memos: SimplechoMemos,
-    Page: SimplechoPage,
-    Post: SimplechoPost,
-    Tag: SimplechoTag,
-    Tags: SimplechoTags,
   },
   chatgpt: {
     NotFound: ChatGPTNotFound,
