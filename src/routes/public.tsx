@@ -26,6 +26,7 @@ import {
 } from "../lib/utils";
 import { getThemeComponents } from "../views/themes/theme";
 import { sendCommentNotification } from "../lib/comment-notification";
+import { turnstileEnabled, verifyCommentTurnstile } from "../lib/turnstile";
 
 type CommentPageData = {
   comments: BlogComment[];
@@ -326,6 +327,7 @@ publicRoutes.get("/post/:slug/", async (c) => {
     options.file_cdn_url,
   );
   const commentsEnabled = options.comments_enabled === "true";
+  const commentTurnstileEnabled = turnstileEnabled(options);
   const commentData = commentsEnabled
     ? await commentsForContent(c, content, options)
     : null;
@@ -337,6 +339,9 @@ publicRoutes.get("/post/:slug/", async (c) => {
         {...commentData}
         timeZone={options.site_timezone}
         saved={saved}
+        turnstileSiteKey={
+          commentTurnstileEnabled ? options.turnstile_site_key : ""
+        }
       />,
     );
   }
@@ -362,6 +367,9 @@ publicRoutes.get("/post/:slug/", async (c) => {
           {...commentData}
           timeZone={options.site_timezone}
           saved={saved}
+          turnstileSiteKey={
+            commentTurnstileEnabled ? options.turnstile_site_key : ""
+          }
         />
       ) : null}
     </Base>,
@@ -407,6 +415,15 @@ publicRoutes.post("/post/:slug/comments", async (c) => {
       return c.text("网站地址格式不正确。", 400);
     }
   }
+  if (turnstileEnabled(options)) {
+    const token = String(form.get("cf-turnstile-response") ?? "");
+    const verified = await verifyCommentTurnstile({
+      secret: options.turnstile_secret_key,
+      token,
+      remoteIp: c.req.header("CF-Connecting-IP"),
+    });
+    if (!verified) return c.text("人机验证失败，请重新提交评论。", 403);
+  }
   await dbRun(
     c.env.BLOG_DB,
     "INSERT INTO blog_comments(name, email, site, text, created, cid) VALUES(?, ?, ?, ?, ?, ?)",
@@ -445,6 +462,9 @@ publicRoutes.post("/post/:slug/comments", async (c) => {
         {...commentData}
         timeZone={options.site_timezone}
         saved
+        turnstileSiteKey={
+          turnstileEnabled(options) ? options.turnstile_site_key : ""
+        }
       />,
     );
   }

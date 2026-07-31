@@ -13,6 +13,7 @@
 ├── 静态资源请求 ─────────────→ Workers Static Assets
 ├── 前台动态页面 ─────────────→ Hono → D1
 ├── 后台管理请求 ─────────────→ Hono → sessions_cache / D1
+├── 评论 Turnstile ──────────→ challenges.cloudflare.com → Siteverify
 ├── 评论提醒邮件 ─────────────→ BLOG_EMAIL → Cloudflare Destination Address
 ├── /uploads/* ───────────────→ Hono → R2
 └── CDN 文件地址 ─────────────→ R2 公共域名或外部 CDN
@@ -40,10 +41,11 @@ src/routes/public.tsx          前台路由、公开内容查询、评论和 Ato
 src/routes/admin.tsx           后台路由、CRUD、上传、导入导出
 src/theme.ts                   主题名称、默认主题和静态资源路径
 src/types.ts                   运行时绑定与业务类型
-src/lib/                       数据库、认证、缓存、设置、导航、Emoji、评论提醒等公共逻辑
+src/lib/                       数据库、认证、缓存、设置、导航、Emoji、Turnstile、评论提醒等公共逻辑
 src/views/admin/               后台 JSX 页面
 src/views/themes/theme.ts      前台主题组件注册表
 src/views/themes/<theme>/      各主题 JSX 组件
+static/comments-turnstile.js  评论 Turnstile 按需执行与提交
 static/admin/                  后台 CSS、JavaScript
 static/<theme>/                主题 CSS、JavaScript、图片
 schema.sql                     当前完整数据库结构
@@ -250,7 +252,7 @@ cid
 
 ### blog_options
 
-Key/Value 设置表，保存站点信息、主题、分页、导航、附件模板和关于页资料。
+Key/Value 设置表，保存站点信息、主题、分页、导航、附件模板、Turnstile、评论提醒和关于页资料。
 
 ### blog_sessions
 
@@ -273,6 +275,8 @@ admin_memos_per_page        25
 admin_comments_per_page     20
 admin_attachments_per_page  30
 comments_enabled            false
+turnstile_site_key           空
+turnstile_secret_key         空
 comment_notification_from   空
 comment_notification_to     空
 file_cdn_url                空
@@ -425,6 +429,7 @@ static/
 ```text
 static/admin/admin.css
 static/admin/admin.js
+static/comments-turnstile.js
 ```
 
 主题资源：
@@ -530,6 +535,14 @@ RELATIVE_PATH
 评论分页使用 `comments_per_page`。提交成功或评论翻页时，前端 JavaScript 更新评论区域，避免跳回页面顶部。
 
 后台支持评论列表、按内容筛选、编辑和删除。
+
+### 评论 Turnstile
+
+设置页在“开启评论功能”下方并排提供 `turnstile_site_key` 与 `turnstile_secret_key`。两个值必须同时填写或同时留空；同时存在时，路由层只把 Site Key 传给主题，Secret Key 仅保留在 Worker 服务端。
+
+五套主题的 `partials/comments.tsx` 都接收 `turnstileSiteKey`。启用时，评论表单暴露统一的 `data-comment-form`、`data-turnstile-sitekey`、`cf-turnstile-response` 和 `data-turnstile-container` 接口，并加载公共脚本 `static/comments-turnstile.js`。该脚本在用户点击提交后才加载 Cloudflare Turnstile API，以 `execution=execute`、`appearance=interaction-only` 和 `action=comment` 执行验证。
+
+`POST /post/:slug/comments` 在字段校验后、写入 D1 前调用 `src/lib/turnstile.ts`。Siteverify 必须返回 `success=true` 且 `action=comment`；失败时返回 403，不写入评论，也不发送提醒邮件。
 
 ### 评论邮件提醒
 

@@ -1137,6 +1137,8 @@ adminRoutes.post("/admin/options", async (c) => {
     "file_cdn_url",
     "image_compression_quality",
     "emoji_items",
+    "turnstile_site_key",
+    "turnstile_secret_key",
     "comment_notification_from",
     "comment_notification_to",
     "about_avatar",
@@ -1155,6 +1157,12 @@ adminRoutes.post("/admin/options", async (c) => {
   values.site_theme = normalizeThemeName(values.site_theme);
   values.comments_enabled =
     form.get("comments_enabled") === "true" ? "true" : "false";
+  values.turnstile_site_key = values.turnstile_site_key.trim();
+  values.turnstile_secret_key = values.turnstile_secret_key.trim();
+  if (
+    Boolean(values.turnstile_site_key) !== Boolean(values.turnstile_secret_key)
+  )
+    return c.text("Turnstile 站点密钥和私密密钥需要同时填写或同时留空。", 400);
   const notificationFromInput = values.comment_notification_from.trim();
   const notificationToInput = values.comment_notification_to.trim();
   values.comment_notification_from = normalizeNotificationEmail(

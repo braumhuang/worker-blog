@@ -10,6 +10,7 @@
 - Markdown 编辑、预览、快捷格式按钮和文章封面
 - 分类、标签、归档、全文搜索和 Atom 订阅
 - 文章及页面评论，前后台独立分页
+- 可选 Cloudflare Turnstile 评论验证，点击发表评论时按需执行
 - 基于 Cloudflare Destination Addresses 的新评论邮件提醒
 - 前台导航管理，自带菜单与新增菜单分组
 - 友链管理
@@ -53,6 +54,7 @@ src/
 │   ├── markdown.ts                Markdown 渲染
 │   ├── navigation.ts              前台导航配置
 │   ├── options.ts                 站点设置及默认值
+│   ├── turnstile.ts               评论 Turnstile 服务端验证
 │   └── utils.ts                   时间、附件、文本等工具
 ├── routes/
 │   ├── admin.tsx                  后台路由和管理操作
@@ -67,6 +69,7 @@ src/
         ├── vermillion/
         └── chatgpt/
 static/
+├── comments-turnstile.js          评论 Turnstile 按需加载与提交
 ├── admin/
 │   ├── admin.css
 │   ├── admin.js
@@ -311,7 +314,148 @@ Cloudflare Custom Domains 文档：
 
 - <https://developers.cloudflare.com/workers/configuration/routing/custom-domains/>
 
-### 7. 配置评论邮件提醒
+### 7. 配置 Turnstile 评论验证
+
+评论功能可以选择接入 Cloudflare Turnstile。项目只把 Turnstile 用于评论提交，不影响文章浏览、评论列表读取或后台登录。只有后台的“Turnstile 站点密钥”和“Turnstile 私密密钥”同时存在时才启用验证；两项同时留空则保持原有评论流程。
+
+当前实现采用按需执行模式：文章详情页不会立即请求 Cloudflare Turnstile API。用户点击评论表单的“发表评论”按钮后，浏览器才加载 Turnstile API，以显式渲染方式执行 `action=comment` 验证；得到 token 后再向 Worker 提交评论。Worker 必须通过 Siteverify 校验，并确认真实 Widget 返回的 `action` 为 `comment`，之后才会把评论写入 D1。使用 Cloudflare 官方始终成功测试私密密钥时，项目仅依据 Siteverify 的 `success=true` 放行该官方 dummy token，不额外要求 `action`；真实密钥仍严格要求 `action=comment`。
+
+#### 7.1 创建 Turnstile Widget
+
+1. 登录 Cloudflare Dashboard。
+2. 进入 **Turnstile**，点击 **Add widget**。
+3. Widget 名称可以填写 `worker-blog-comments`。
+4. 在 Hostname Management 中加入博客实际使用的主机名，例如：
+
+   ```text
+   blog.example.com
+   ```
+
+   只填写主机名，不要包含 `https://`、端口、路径或通配符。使用 `workers.dev` 地址时，填写该 Worker 的实际主机名。
+
+5. Widget mode 推荐选择 **Managed**，由 Cloudflare 根据访客风险决定是否需要交互。
+6. 创建后复制 **Site Key** 和 **Secret Key**。Site Key 可以发送到浏览器；Secret Key 只能用于服务端 Siteverify。
+
+Cloudflare 官方文档：
+
+- <https://developers.cloudflare.com/turnstile/get-started/widget-management/dashboard/>
+- <https://developers.cloudflare.com/turnstile/additional-configuration/hostname-management/>
+
+#### 7.2 在博客后台开启
+
+先登录博客后台，进入：
+
+```text
+设置 → 开启评论功能
+```
+
+“开启评论功能”下方会显示一行两个等宽输入框：
+
+| 后台设置           | 填写内容                     | 用途                              |
+| ------------------ | ---------------------------- | --------------------------------- |
+| Turnstile 站点密钥 | Cloudflare 提供的 Site Key   | 前端点击发表评论时创建验证组件    |
+| Turnstile 私密密钥 | Cloudflare 提供的 Secret Key | Worker 调用 Siteverify 验证 token |
+
+保存规则：
+
+- 两项同时填写：开启评论 Turnstile；
+- 两项同时留空：关闭评论 Turnstile；
+- 只填写其中一项：后台拒绝保存并提示补全配置。
+
+私密密钥保存在 D1 的 `blog_options` 中，不会传给前台，但会包含在后台导出的 JSON 数据中。请妥善保管导出文件，不要提交到公开仓库；在 Cloudflare 轮换 Secret Key 后，也需要立即更新后台设置。
+
+#### 7.3 评论提交过程
+
+启用后的请求顺序如下：
+
+```text
+用户填写评论
+→ 点击“发表评论”
+→ /comments-turnstile.js 拦截评论表单提交
+→ 按需加载 challenges.cloudflare.com 上的 Turnstile API
+→ 以 execution=execute、appearance=interaction-only 执行验证
+→ 浏览器取得 action=comment 的一次性 token
+→ POST /post/:slug/comments
+→ Worker 调用 Siteverify
+→ 验证 success=true 且 action=comment
+→ 写入 blog_comments
+→ 返回更新后的评论区
+```
+
+Siteverify 使用：
+
+```text
+POST https://challenges.cloudflare.com/turnstile/v0/siteverify
+```
+
+请求包含私密密钥、浏览器生成的 token，并在可用时附带 `CF-Connecting-IP`。验证失败、token 缺失、token 过期或 token 被重复使用时，Worker 返回 `403`，评论不会写入数据库。
+
+Turnstile token 只有五分钟有效期且只能验证一次。本项目在点击发表评论后才生成 token，并在当前提交中立即验证，避免访客长时间阅读文章导致提前生成的 token 过期。
+
+Cloudflare 官方文档：
+
+- <https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/>
+- <https://developers.cloudflare.com/turnstile/get-started/server-side-validation/>
+
+#### 7.4 测试与关闭
+
+部署后建议分别完成下面的检查：
+
+1. 打开一个已发布的文章详情页。
+2. 填写名字、邮箱和评论内容。
+3. 点击“发表评论”，确认按钮先显示“正在验证…”，随后显示“正在提交…”。
+4. 确认评论成功写入，并在 Turnstile Analytics 中出现 Siteverify 数据。
+5. 使用 `curl`、API 客户端或浏览器开发者工具重放评论 POST 请求，但不携带有效的 `cf-turnstile-response`，确认 Worker 返回 `403`。
+
+需要临时关闭时，在后台同时清空两个 Turnstile 密钥并保存，不需要重新部署，也不需要修改 D1 表结构。
+
+常见问题：
+
+- **一直提示人机验证失败**：确认 Site Key 和 Secret Key 来自同一个 Widget。
+- **组件报域名错误**：确认 Turnstile Widget 的 Hostname Management 已加入当前博客主机名。
+- **本地开发失败**：使用 Cloudflare 官方测试密钥，或把本地主机名加入专门用于开发的 Widget；不要把生产 Secret Key 放入公开文件。
+- **官方成功测试密钥仍返回 403**：确认私密密钥完整保存为 `1x0000000000000000000000000000000AA`，重新启动本地 Worker，并硬刷新文章页后再提交。项目只在精确识别到这一把官方测试私密密钥时跳过额外的 action 校验；真实密钥不会放行空 action。
+- **日志出现 `timeout-or-duplicate`**：如果使用私密密钥 `3x0000000000000000000000000000000AA`，这是预期结果；这把密钥专门模拟 token 已使用，评论应返回 `403`。真实密钥下出现该错误，则表示 token 已过期或被重复验证。
+- **浏览器无法加载验证**：确认网络、安全扩展或 CSP 没有阻止 `challenges.cloudflare.com`。
+- **保存配置时报错**：两个密钥必须同时填写或同时清空。
+
+本地成功测试组合：
+
+```text
+Turnstile 站点密钥：1x00000000000000000000AA
+Turnstile 私密密钥：1x0000000000000000000000000000000AA
+```
+
+预期结果是评论成功写入。Cloudflare 文档示例中的测试响应包含 `action=test`，但某些本地执行环境可能返回空 action；项目仅在检测到上述官方测试私密密钥时跳过 action 校验，生产或自建 Widget 仍必须返回 `action=comment`。
+
+模拟 token 已使用：
+
+```text
+Turnstile 站点密钥：1x00000000000000000000AA
+Turnstile 私密密钥：3x0000000000000000000000000000000AA
+```
+
+预期结果是 Worker 返回 `403`，日志包含 `timeout-or-duplicate`。这是用于验证错误处理的失败用例，不是成功用例。
+
+测试说明：
+
+- <https://developers.cloudflare.com/turnstile/troubleshooting/testing/>
+
+#### 7.5 多主题与新增主题
+
+Kehua、Writecho、Printer、Vermillion 和 ChatGPT 五套内置主题的 `partials/comments.tsx` 均已接入相同流程。公共脚本 `/comments-turnstile.js` 负责按需加载 Turnstile、执行验证和提交评论，各主题原有的评论样式、评论分页和未启用 Turnstile 时的提交行为不变。
+
+新增主题时，建议复制任一现有主题的评论组件，并保留下面的接口：
+
+- `Comments` 组件接收 `turnstileSiteKey: string`；
+- 评论表单包含 `data-comment-form`；
+- 启用时给表单设置 `data-turnstile-sitekey`；
+- 表单中包含名为 `cf-turnstile-response` 的隐藏输入框和 `data-turnstile-container` 容器；
+- 评论区加载 `/comments-turnstile.js`。
+
+关闭 JavaScript 的访客在启用 Turnstile 后无法提交评论，这是服务端强制验证的预期行为。
+
+### 8. 配置评论邮件提醒
 
 评论提醒使用 Cloudflare 的 `send_email` Worker Binding，并把后台配置的收件邮箱作为 Cloudflare **Destination Address** 使用。`wrangler.toml` 和 GitHub Actions 生成的部署配置默认包含 `BLOG_EMAIL` 绑定；只有后台同时填写“评论提醒发件邮箱”和“评论提醒收件邮箱”时，评论提交代码才会尝试发送邮件。
 
@@ -324,7 +468,7 @@ name = "BLOG_EMAIL"
 
 由于收件邮箱由后台设置决定，绑定没有写死 `destination_address`；Cloudflare 仍会校验目标邮箱必须是当前账户中已经验证的 Destination Address。两个后台邮箱任意一个留空时，评论只写入 D1，不调用 `BLOG_EMAIL.send()`。
 
-#### 7.1 前置条件
+#### 8.1 前置条件
 
 - 发件域名必须使用 Cloudflare DNS；
 - 发件域名需要启用 Email Routing 或完成 Email Service 域名接入；
@@ -333,7 +477,7 @@ name = "BLOG_EMAIL"
 
 发送到已验证 Destination Address 的邮件不计入 Cloudflare Email Service 的月度和每日发送额度；仅启用 Email Routing 时也可以使用。
 
-#### 7.2 在 Cloudflare 启用 Email Routing
+#### 8.2 在 Cloudflare 启用 Email Routing
 
 1. 登录 Cloudflare Dashboard。
 2. 进入：
@@ -354,7 +498,7 @@ notify@example.com
 
 后台填写的发件邮箱必须属于已经接入的域名，不要填写 Gmail、QQ 邮箱等外部域名作为发件邮箱。
 
-#### 7.3 添加并验证 Destination Address
+#### 8.3 添加并验证 Destination Address
 
 1. 在 Cloudflare Dashboard 进入：
 
@@ -368,7 +512,7 @@ notify@example.com
 
 Destination Addresses 在 Cloudflare 账户级别管理，同一账户中的多个域名和 Worker 可以复用。后台填写未验证的收件邮箱时，Cloudflare 会拒绝发送。
 
-#### 7.4 部署 Email Binding
+#### 8.4 部署 Email Binding
 
 项目默认在 `wrangler.toml` 和 GitHub Actions 动态生成的配置中加入下面的绑定：
 
@@ -385,7 +529,7 @@ Actions → Deploy Worker → Run workflow
 
 手动部署用户确认 `wrangler.toml` 中存在该配置后执行 `npm run deploy`。不需要创建 API Key、SMTP 密码或新的 Worker Secret。若暂时不使用评论提醒，后台两个提醒邮箱保持为空即可，代码不会尝试发信。
 
-#### 7.5 在博客后台填写邮箱
+#### 8.5 在博客后台填写邮箱
 
 登录博客后台，进入：
 
@@ -402,7 +546,7 @@ Actions → Deploy Worker → Run workflow
 
 保存后发布一条测试评论。提醒邮件包含文章标题、评论者姓名、邮箱、网站、评论正文和评论链接。评论会先写入 D1，邮件在后台异步发送；邮件发送失败不会导致访客评论提交失败，可在 Worker Logs 中查看 `发送评论提醒邮件失败` 日志。
 
-#### 7.6 常见问题
+#### 8.6 常见问题
 
 - **评论保存但没有邮件**：检查两个邮箱是否都已填写、Worker 是否存在 `BLOG_EMAIL` 绑定，并查看 Worker Logs。
 - **Destination address is not allowed / not verified**：到 Destination Addresses 页面完成收件邮箱验证。
@@ -417,7 +561,7 @@ Cloudflare 官方文档：
 - <https://developers.cloudflare.com/email-service/api/send-emails/workers-api/>
 - <https://developers.cloudflare.com/email-service/platform/limits/>
 
-### 8. 运行部署
+### 9. 运行部署
 
 进入 Fork 后仓库：
 
@@ -427,7 +571,7 @@ Actions → Deploy Worker → Run workflow
 
 项目使用完整 `schema.sql`，不使用 migrations。工作流每次都会执行 `CREATE TABLE IF NOT EXISTS` 和索引、触发器定义，但不会自动修改已经存在且结构不兼容的旧表。
 
-### 9. 后台设置推荐
+### 10. 后台设置推荐
 
 首次部署并登录后台后，建议配置 **文件 CDN 域名**，例如 R2 Bucket 的自定义公开域名：
 

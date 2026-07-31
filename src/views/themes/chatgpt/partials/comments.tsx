@@ -31,6 +31,7 @@ export function Comments({
   totalPages,
   timeZone,
   saved,
+  turnstileSiteKey,
 }: {
   content: BlogContent;
   comments: BlogComment[];
@@ -39,6 +40,7 @@ export function Comments({
   totalPages: number;
   timeZone: string;
   saved: boolean;
+  turnstileSiteKey: string;
 }) {
   return (
     <section class="comment-section" id="comments">
@@ -50,6 +52,8 @@ export function Comments({
       <form
         class="cg-comment-form"
         method="post"
+        data-comment-form
+        data-turnstile-sitekey={turnstileSiteKey || undefined}
         action={`/post/${encodeURIComponent(content.slug)}/comments`}
       >
         <div class="cg-comment-fields">
@@ -86,7 +90,20 @@ export function Comments({
         <div class="cg-comment-actions">
           <button type="submit">发表评论</button>
         </div>
+        {turnstileSiteKey ? (
+          <>
+            <input
+              type="hidden"
+              name="cf-turnstile-response"
+              data-turnstile-response
+            />
+            <div data-turnstile-container aria-live="polite" />
+          </>
+        ) : null}
       </form>
+      {turnstileSiteKey ? (
+        <script src="/comments-turnstile.js" defer></script>
+      ) : null}
       <div class="cg-comments-list">
         {comments.length ? (
           comments.map((comment) => (

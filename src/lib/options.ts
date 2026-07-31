@@ -96,6 +96,8 @@ export const DEFAULT_OPTIONS: OptionMap = {
   image_compression_quality: "80",
   emoji_items: serializeEmojiItems(DEFAULT_EMOJI_ITEMS),
   comments_enabled: "false",
+  turnstile_site_key: "",
+  turnstile_secret_key: "",
   comment_notification_from: "",
   comment_notification_to: "",
   navigation_menu: serializeNavigationItems(DEFAULT_NAVIGATION_ITEMS),
@@ -126,6 +128,8 @@ function normalizeOptions(stored: OptionMap): OptionMap {
     options.site_timezone = DEFAULT_OPTIONS.site_timezone;
   options.comments_enabled =
     options.comments_enabled === "true" ? "true" : "false";
+  options.turnstile_site_key = options.turnstile_site_key.trim();
+  options.turnstile_secret_key = options.turnstile_secret_key.trim();
   options.comment_notification_from = normalizeNotificationEmail(
     options.comment_notification_from,
   );

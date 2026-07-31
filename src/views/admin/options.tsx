@@ -249,6 +249,36 @@ export function OptionsPage({
             </div>
             <div class="settings-inline">
               <div class="field">
+                <label for="turnstile_site_key">Turnstile 站点密钥</label>
+                <input
+                  class="input"
+                  id="turnstile_site_key"
+                  name="turnstile_site_key"
+                  value={options.turnstile_site_key}
+                  placeholder="0x4AAAAAAA..."
+                  autocomplete="off"
+                />
+                <small class="muted">浏览器端公开使用的 Site Key。</small>
+              </div>
+              <div class="field">
+                <label for="turnstile_secret_key">Turnstile 私密密钥</label>
+                <input
+                  class="input"
+                  id="turnstile_secret_key"
+                  name="turnstile_secret_key"
+                  type="password"
+                  value={options.turnstile_secret_key}
+                  placeholder="0x4AAAAAAA..."
+                  autocomplete="off"
+                />
+                <small class="muted">
+                  两项同时填写后启用评论机器人拦截；私密密钥只用于 Worker
+                  服务端验证。
+                </small>
+              </div>
+            </div>
+            <div class="settings-inline">
+              <div class="field">
                 <label for="comment_notification_from">评论提醒发件邮箱</label>
                 <input
                   class="input"
