@@ -1,4 +1,10 @@
+import packageJson from "../../../package.json";
 import type { PropsWithChildren } from "hono/jsx";
+
+const WORKER_BLOG_VERSION = packageJson.version;
+const WORKER_BLOG_RELEASES_URL =
+  "https://github.com/braumhuang/worker-blog/releases";
+const WORKER_BLOG_VERSION_URL = `${WORKER_BLOG_RELEASES_URL}/tag/v${WORKER_BLOG_VERSION}`;
 
 const adminNav = [
   ["/admin", "面板"],
@@ -103,12 +109,21 @@ export function AdminLayout({
           <p>
             Powered by{" "}
             <a
-              href="https://github.com/braumhuang/worker-blog"
+              href={WORKER_BLOG_RELEASES_URL}
               target="_blank"
               rel="noopener noreferrer"
             >
               Worker Blog
             </a>
+            (
+            <a
+              href={WORKER_BLOG_VERSION_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              v{WORKER_BLOG_VERSION}
+            </a>
+            )
           </p>
         </footer>
         <script src="/admin/image-compression.js" defer></script>
