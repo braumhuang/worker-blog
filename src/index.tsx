@@ -19,6 +19,15 @@ app.use(
   }),
 );
 
+app.use("*", async (c, next) => {
+  const url = new URL(c.req.url);
+  if (!url.hostname.startsWith("www.")) return next();
+  const options = await getOptions(c.env.BLOG_DB);
+  if (options.www_redirect !== "true") return next();
+  url.hostname = url.hostname.replace(/^www\./, "");
+  return c.redirect(url.toString(), 301);
+});
+
 app.get("/favicon.svg", async (c) => {
   const options = await getOptions(c.env.BLOG_DB);
   return c.body(renderFaviconSvg(options), 200, {

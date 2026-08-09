@@ -280,6 +280,7 @@ turnstile_secret_key         空
 comment_notification_from   空
 comment_notification_to     空
 file_cdn_url                空
+www_redirect                false
 image_compression_quality   80（1–100，100 表示不压缩）
 emoji_items                 默认 Emoji 列表，图片表情“滑稽”位于首项
 site_timezone               Asia/Shanghai

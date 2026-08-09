@@ -1135,6 +1135,7 @@ adminRoutes.post("/admin/options", async (c) => {
     "admin_comments_per_page",
     "admin_attachments_per_page",
     "file_cdn_url",
+    "www_redirect",
     "image_compression_quality",
     "emoji_items",
     "turnstile_site_key",
@@ -1157,6 +1158,7 @@ adminRoutes.post("/admin/options", async (c) => {
   values.site_theme = normalizeThemeName(values.site_theme);
   values.comments_enabled =
     form.get("comments_enabled") === "true" ? "true" : "false";
+  values.www_redirect = form.get("www_redirect") === "true" ? "true" : "false";
   values.turnstile_site_key = values.turnstile_site_key.trim();
   values.turnstile_secret_key = values.turnstile_secret_key.trim();
   if (

@@ -95,6 +95,21 @@ export function OptionsPage({
                 value={options.site_description}
               />
             </div>
+            <div class="field option-check">
+              <label>
+                <input
+                  type="checkbox"
+                  name="www_redirect"
+                  value="true"
+                  checked={options.www_redirect === "true"}
+                />{" "}
+                开启 www 重定向到根域名
+              </label>
+              <small class="muted">
+                开启后，所有以 www. 开头的请求将 301 重定向到不带 www.
+                的根域名地址。
+              </small>
+            </div>
             <div class="field">
               <label>文件 CDN 域名</label>
               <input

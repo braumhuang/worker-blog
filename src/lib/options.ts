@@ -93,6 +93,7 @@ export const DEFAULT_OPTIONS: OptionMap = {
   admin_comments_per_page: "20",
   admin_attachments_per_page: "30",
   file_cdn_url: "",
+  www_redirect: "false",
   image_compression_quality: "80",
   emoji_items: serializeEmojiItems(DEFAULT_EMOJI_ITEMS),
   comments_enabled: "false",
@@ -128,6 +129,7 @@ function normalizeOptions(stored: OptionMap): OptionMap {
     options.site_timezone = DEFAULT_OPTIONS.site_timezone;
   options.comments_enabled =
     options.comments_enabled === "true" ? "true" : "false";
+  options.www_redirect = options.www_redirect === "true" ? "true" : "false";
   options.turnstile_site_key = options.turnstile_site_key.trim();
   options.turnstile_secret_key = options.turnstile_secret_key.trim();
   options.comment_notification_from = normalizeNotificationEmail(
